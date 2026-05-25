@@ -1,12 +1,11 @@
-package com.moldsim.model;
-import java.io.Serializable;
+package moldsim;
 
 /**
  *  comment une cellule voit ses voisins :
  * FOUR (Von Neumann : haut, bas, gauche, droite) et
  * EIGHT (Moore : ajoute les 4 diagonales)
  */
-public enum NeighborhoodMode implements Serializable {
+public enum NeighborhoodMode{
     FOUR,
     EIGHT
 }

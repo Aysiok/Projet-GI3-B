@@ -1,4 +1,4 @@
-package com.moldsim.model;
+package moldsim;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;

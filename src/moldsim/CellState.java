@@ -1,12 +1,11 @@
-package com.moldsim.model;
-import java.io.Serializable;
+package moldsim;
 
 /**
  * États possibles de cellule 
  * HEALTHY (sans moisissure), INFECTED,
  * DEAD 
  */
-public enum CellState implements Serializable {
+public enum CellState{
     HEALTHY,
     INFECTED,
     DEAD

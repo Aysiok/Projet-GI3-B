@@ -1,5 +1,4 @@
-package com.moldsim.model;
-import java.io.Serializable;
+package moldsim;
 
 /**
  * Les espèces de moisissure qui poussent sur un mur :
@@ -9,7 +8,7 @@ import java.io.Serializable;
  * STACHYBOTRYS : moisissure noire, exige une très forte humidité.
  */
 
-public enum MoldSpecies implements Serializable {
+public enum MoldSpecies{
 
     CLADOSPORIUM(
             "Cladosporium",
