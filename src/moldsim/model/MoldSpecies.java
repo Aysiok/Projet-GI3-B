@@ -1,4 +1,4 @@
-package moldsim;
+package moldsim.model;
 
 /**
  * Les espèces de moisissure qui poussent sur un mur :

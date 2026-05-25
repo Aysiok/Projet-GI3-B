@@ -1,4 +1,4 @@
-package moldsim;
+package moldsim.model;
 
 /**
  * États possibles de cellule 

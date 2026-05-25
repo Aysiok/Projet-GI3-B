@@ -1,4 +1,4 @@
-package moldsim;
+package moldsim.model;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
@@ -21,8 +21,6 @@ public class Grid implements Serializable {
     /** grille avec des cellules same */
     public Grid(int width,
                 int height,
-                double initialHumidity,
-                double initialTemperature,
                 boolean toric,
                 NeighborhoodMode neighborhoodMode) {
         if (width <= 0 || height <= 0) {
@@ -36,14 +34,9 @@ public class Grid implements Serializable {
         this.toric = toric;
         this.neighborhoodMode = neighborhoodMode;
         this.cells = new Cell[height][width];
-        initializeCells(initialHumidity, initialTemperature);
-    }
-
-    /** que des cellules saines */
-    private void initializeCells(double initialHumidity, double initialTemperature) {
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
-                cells[y][x] = new Cell(x, y, initialHumidity, initialTemperature);
+                cells[y][x] = new Cell(x, y);
             }
         }
     }
@@ -108,8 +101,6 @@ public class Grid implements Serializable {
             for (int x = 0; x < width; x++) {
                 Cell c = cells[y][x];
                 c.cure();
-                c.setHumidity(humidity);
-                c.setTemperature(temperature);
                 c.setAge(0);
             }
         }

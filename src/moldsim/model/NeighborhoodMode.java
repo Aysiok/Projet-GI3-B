@@ -1,4 +1,4 @@
-package moldsim;
+package moldsim.model;
 
 /**
  *  comment une cellule voit ses voisins :

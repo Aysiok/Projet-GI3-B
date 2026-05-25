@@ -1,4 +1,4 @@
-package moldsim;
+package moldsim.model;
 import java.io.Serializable;
 
 /**
@@ -12,10 +12,6 @@ public class Cell implements Serializable {
     private final int x;
     private final int y;
 
-    // Environnement
-    private double humidity;      // 0..100 (%)
-    private double temperature;   // en °C
-
     // Biologie
     private double moldLevel;     // 0..100
     private int age;              // nombre de pas survécus
@@ -23,11 +19,9 @@ public class Cell implements Serializable {
     private MoldSpecies species;  // null si HEALTHY ou DEAD
 
     /** Crée  cellule saine aux coordonnées qu'on donne*/
-    public Cell(int x, int y, double humidity, double temperature) {
+    public Cell(int x, int y) {
         this.x = x;
         this.y = y;
-        this.humidity = humidity;
-        this.temperature = temperature;
         this.moldLevel = 0.0;
         this.age = 0;
         this.state = CellState.HEALTHY;
@@ -78,14 +72,6 @@ public class Cell implements Serializable {
     public int getX() { return x; }
     public int getY() { return y; }
 
-    public double getHumidity() { return humidity; }
-    public void setHumidity(double humidity) {
-        this.humidity = clamp(humidity);  
-    }
-
-    public double getTemperature() { return temperature; }
-    public void setTemperature(double temperature) { this.temperature = temperature; }
-
     public double getMoldLevel() { return moldLevel; }
     public void setMoldLevel(double moldLevel) {
         this.moldLevel = clamp(moldLevel);
@@ -114,8 +100,6 @@ public class Cell implements Serializable {
     public String toString() {
         return "Cell(" + x + "," + y + ", " + state
                 + (species != null ? " [" + species.name() + "]" : "")
-                + ", hum=" + String.format("%.1f", humidity)
-                + ", temp=" + String.format("%.1f", temperature)
                 + ", mold=" + String.format("%.1f", moldLevel)
                 + ", age=" + age + ")";
     }
