@@ -28,10 +28,15 @@ public class Main {
         Simulation sim = new Simulation(grid, env);
         System.out.println("Etat initial :");
         printGrid(grid);
+        int previousInfected = 0;
         for (int i = 0; i < 10; i++) {
             sim.step();
-            System.out.println("Tour " + (i+1) + " :");
+            System.out.println("Tour " + (i + 1) + " :");
             printGrid(grid);
+            Statistics stats = new Statistics(grid, previousInfected);
+            System.out.println("Tour " + (i + 1) + " :");
+            System.out.println(stats);
+            previousInfected = stats.getInfectedCells();
         }
     }
 
