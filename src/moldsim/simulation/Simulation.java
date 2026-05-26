@@ -1,8 +1,14 @@
-package moldsim.model;
+package moldsim.simulation;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+
+import moldsim.model.Cell;
+import moldsim.model.CellState;
+import moldsim.model.Environment;
+import moldsim.model.Grid;
+import moldsim.model.MoldSpecies;
 
 public class Simulation {
     private final Grid grid;

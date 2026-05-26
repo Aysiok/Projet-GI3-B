@@ -1,5 +1,7 @@
 package moldsim;
 import moldsim.model.*;
+import moldsim.simulation.*;
+
 import java.util.Scanner;
 
 public class Main {
