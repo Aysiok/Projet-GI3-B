@@ -1,0 +1,118 @@
+package moldsim.model;
+
+import com.itextpdf.text.*;
+import com.itextpdf.text.pdf.*;
+import java.io.FileOutputStream;
+import java.util.List;
+
+/**
+ * Exports simulation statistics to a PDF report.
+ */
+public class PdfExporter {
+
+    private static final Font TITLE_FONT   = new Font(Font.FontFamily.HELVETICA, 18, Font.BOLD);
+    private static final Font SECTION_FONT = new Font(Font.FontFamily.HELVETICA, 13, Font.BOLD);
+    private static final Font NORMAL_FONT  = new Font(Font.FontFamily.HELVETICA, 11);
+    private static final Font SMALL_FONT   = new Font(Font.FontFamily.HELVETICA, 9);
+
+    /**
+     * Generates a PDF report from a list of statistics snapshots.
+     * @param stats    list of Statistics, one per simulation step
+     * @param env      the environment used during simulation
+     * @param filePath output file path (e.g. "report.pdf")
+     */
+    public static void export(List<Statistics> stats, Environment env, String filePath) {
+        try {
+            Document document = new Document();
+            PdfWriter.getInstance(document, new FileOutputStream(filePath));
+            document.open();
+
+            // ── Title ──────────────────────────────────────────
+            Paragraph title = new Paragraph("MoisSim — Simulation Report", TITLE_FONT);
+            title.setAlignment(Element.ALIGN_CENTER);
+            title.setSpacingAfter(20);
+            document.add(title);
+
+            // ── Environment summary ────────────────────────────
+            document.add(new Paragraph("Environment", SECTION_FONT));
+            document.add(new Paragraph("Humidity    : " + env.getHumidity() + " %", NORMAL_FONT));
+            document.add(new Paragraph("Temperature : " + env.getTemperature() + " °C", NORMAL_FONT));
+            document.add(new Paragraph("Ventilation : " + env.getVentilation() + " %", NORMAL_FONT));
+            document.add(new Paragraph("Material    : " + env.getMaterial(), NORMAL_FONT));
+            document.add(Chunk.NEWLINE);
+
+            // ── Statistics table ───────────────────────────────
+            document.add(new Paragraph("Step-by-step Statistics", SECTION_FONT));
+            document.add(Chunk.NEWLINE);
+
+            PdfPTable table = new PdfPTable(7);
+            table.setWidthPercentage(100);
+            table.setSpacingBefore(5);
+
+            // Header
+            String[] headers = { "Step", "Healthy", "Infected", "Dead", "Trend", "Avg Age", "Avg Mold" };
+            for (String h : headers) {
+                PdfPCell cell = new PdfPCell(new Phrase(h, SECTION_FONT));
+                cell.setBackgroundColor(BaseColor.LIGHT_GRAY);
+                cell.setHorizontalAlignment(Element.ALIGN_CENTER);
+                cell.setPadding(5);
+                table.addCell(cell);
+            }
+
+            // Rows
+            for (int i = 0; i < stats.size(); i++) {
+                Statistics s = stats.get(i);
+                int total = s.getTotalCells();
+                table.addCell(centeredCell(String.valueOf(i + 1)));
+                table.addCell(centeredCell(s.getHealthyCells() + " (" + String.format("%.1f", 100.0 * s.getHealthyCells() / total) + "%)"));
+                table.addCell(centeredCell(s.getInfectedCells() + " (" + String.format("%.1f", 100.0 * s.getInfectedCells() / total) + "%)"));
+                table.addCell(centeredCell(s.getDeadCells() + " (" + String.format("%.1f", 100.0 * s.getDeadCells() / total) + "%)"));
+                table.addCell(centeredCell(s.getTrend()));
+                table.addCell(centeredCell(String.format("%.1f", s.getAverageAge())));
+                table.addCell(centeredCell(String.format("%.1f", s.getAverageMoldLevel())));
+            }
+
+            document.add(table);
+            document.add(Chunk.NEWLINE);
+
+            // ── Final summary ──────────────────────────────────
+            if (!stats.isEmpty()) {
+                Statistics last = stats.get(stats.size() - 1);
+                document.add(new Paragraph("Final State", SECTION_FONT));
+                document.add(new Paragraph(
+                    "After " + stats.size() + " steps, " +
+                    last.getInfectedCells() + " cells are infected (" +
+                    String.format("%.1f", 100.0 * last.getInfectedCells() / last.getTotalCells()) +
+                    "% of the wall surface).", NORMAL_FONT));
+
+                // Risk level
+                double pct = 100.0 * last.getInfectedCells() / last.getTotalCells();
+                String risk = pct < 5 ? "Low" : pct < 20 ? "Moderate" : pct < 40 ? "High" : "Critical";
+                Paragraph riskPara = new Paragraph("Risk level : " + risk, SECTION_FONT);
+                riskPara.setSpacingBefore(8);
+                document.add(riskPara);
+            }
+
+            // ── Footer ─────────────────────────────────────────
+            document.add(Chunk.NEWLINE);
+            Paragraph footer = new Paragraph(
+                "Generated by MoisSim — This report is an estimation tool, not a certified diagnosis.",
+                SMALL_FONT);
+            footer.setAlignment(Element.ALIGN_CENTER);
+            document.add(footer);
+
+            document.close();
+            System.out.println("PDF exported to: " + filePath);
+
+        } catch (Exception e) {
+            System.err.println("PDF export failed: " + e.getMessage());
+        }
+    }
+
+    private static PdfPCell centeredCell(String text) {
+        PdfPCell cell = new PdfPCell(new Phrase(text, NORMAL_FONT));
+        cell.setHorizontalAlignment(Element.ALIGN_CENTER);
+        cell.setPadding(4);
+        return cell;
+    }
+}
