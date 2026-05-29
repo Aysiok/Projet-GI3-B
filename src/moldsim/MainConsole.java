@@ -2,7 +2,7 @@ package moldsim;
 
 import moldsim.model.*;
 
-public class Main {
+public class MainConsole {
     public static void main(String[] args) {
         System.out.println("=== Test Simulation Console ===");
 
