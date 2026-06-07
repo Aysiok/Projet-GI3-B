@@ -35,6 +35,12 @@ public class MainView extends BorderPane {
     private Label infectedLabel;
     private Label riskLabel;
 
+    // ── room-wall-display ────────────────────────────────────────────
+    private Label currentLocationLabel;
+    private TextField roomNameField;
+    private TextField wallNameField;
+    private Button applyLocationButton;
+
     // ── Grid placeholder (sera remplacé par GridView) ─────────
     private GridView gridView;
 
@@ -60,9 +66,28 @@ public class MainView extends BorderPane {
         Label version = new Label("v1.0");
         version.setStyle("-fx-text-fill: #888; -fx-font-size: 11;");
 
-        topBar.getChildren().addAll(title, version);
+        currentLocationLabel = new Label("Current view: Archive Room A — North Wall");
+        currentLocationLabel.setStyle("-fx-text-fill: #DDD; -fx-font-size: 12; -fx-font-weight: bold;");
+
+        roomNameField = new TextField("Archive Room A");
+        roomNameField.setPrefWidth(130);
+
+        wallNameField = new TextField("North Wall");
+        wallNameField.setPrefWidth(100);
+
+        applyLocationButton = new Button("Apply");
+
+        topBar.getChildren().addAll(
+            title,
+            version,
+            currentLocationLabel,
+            roomNameField,
+            wallNameField,
+            applyLocationButton
+        );
+
         return topBar;
-    }
+}
 
     // ── Sidebar ───────────────────────────────────────────────
     private VBox buildSidebar() {
@@ -199,4 +224,24 @@ public class MainView extends BorderPane {
     public Label getInfectedLabel()        { return infectedLabel; }
     public Label getRiskLabel()            { return riskLabel; }
     public GridView getGridView()          { return gridView; }
+
+    public Label getCurrentLocationLabel() {
+    return currentLocationLabel;
+    }
+
+    public TextField getRoomNameField() {
+        return roomNameField;
+    }
+
+    public TextField getWallNameField() {
+        return wallNameField;
+    }
+
+    public Button getApplyLocationButton() {
+        return applyLocationButton;
+    }
+
+    public void updateCurrentLocationLabel(String locationText) {
+        currentLocationLabel.setText("Current view: " + locationText);
+    }
 }

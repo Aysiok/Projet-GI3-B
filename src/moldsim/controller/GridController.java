@@ -5,6 +5,7 @@ import moldsim.model.DocumentValue;
 import moldsim.model.Shelf;
 import moldsim.view.GridView;
 import moldsim.view.MainView;
+import moldsim.model.LocationContext;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -19,12 +20,14 @@ public class GridController {
     private final GridView gridView;
     private final List<Shelf> shelves;
     private int generation;
+    private LocationContext locationContext;
 
     public GridController(MainView mainView) {
         this.mainView = mainView;
         this.gridView = mainView.getGridView();
         this.shelves  = new ArrayList<>();
         this.generation = 0;
+        this.locationContext = new LocationContext("Archive Room A", "North Wall");
     }
 
     public void initialize() {
@@ -50,6 +53,9 @@ public class GridController {
         });
 
         updateStatistics();
+        mainView.updateCurrentLocationLabel(locationContext.getDisplayName());
+
+        mainView.getApplyLocationButton().setOnAction(event -> updateLocationFromInput()); 
     }
 
     /** Crée quelques étagères par défaut dans la salle. */
@@ -148,5 +154,18 @@ public class GridController {
         } else {
             mainView.getRiskLabel().setText("Risk: High");
         }
+    }
+    private void updateLocationFromInput() {
+        String roomName = mainView.getRoomNameField().getText();
+        String wallName = mainView.getWallNameField().getText();
+
+        locationContext.setRoomName(roomName);
+        locationContext.setWallName(wallName);
+
+        mainView.updateCurrentLocationLabel(locationContext.getDisplayName());
+
+        mainView.getStatusLabel().setText(
+            "Current location changed to " + locationContext.getDisplayName() + "."
+        );
     }
 }
