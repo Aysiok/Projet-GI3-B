@@ -10,13 +10,12 @@ import moldsim.model.SimulationSnapshot;
 
 import java.util.ArrayList;
 import java.util.List;
-
+import moldsim.Simulation.Simulation;
 /**
  * Controller for the grid interface.
  * Connects MainView controls to GridView actions.
  */
 public class GridController {
-
     private final MainView mainView;
     private final GridView gridView;
     private final List<Shelf> shelves;
@@ -24,6 +23,9 @@ public class GridController {
     private LocationContext locationContext;
     private List<SimulationSnapshot> history;
     private int currentStepIndex;
+    private moldsim.model.Grid modelGrid;
+    private moldsim.model.Environment environment;
+    private moldsim.Simulation.Simulation simulation;
 
     public GridController(MainView mainView) {
         this.mainView = mainView;
@@ -36,6 +38,34 @@ public class GridController {
     }
 
     public void initialize() {
+        modelGrid   = new moldsim.model.Grid(gridView.getColumns(), gridView.getRows(), false, moldsim.model.NeighborhoodMode.EIGHT);
+        environment = new moldsim.model.Environment();
+        environment.setHumidity(mainView.getHumiditySlider().getValue());
+        environment.setTemperature(mainView.getTemperatureSlider().getValue());
+        environment.setVentilation(mainView.getVentilationSlider().getValue());
+        simulation  = new moldsim.Simulation.Simulation(modelGrid, environment);
+        gridView.setSimulation(simulation, modelGrid);
+
+        mainView.getHumiditySlider().valueProperty().addListener((obs, o, n) ->
+            environment.setHumidity(n.doubleValue()));
+        mainView.getTemperatureSlider().valueProperty().addListener((obs, o, n) ->
+            environment.setTemperature(n.doubleValue()));
+        mainView.getVentilationSlider().valueProperty().addListener((obs, o, n) ->
+            environment.setVentilation(n.doubleValue()));
+        mainView.getMaterialComboBox().valueProperty().addListener((obs, o, n) -> {
+            moldsim.model.WallMaterial mat;
+            switch (n) {
+                case "Concrete":  mat = moldsim.model.WallMaterial.CONCRETE;  break;
+                case "Wood":      mat = moldsim.model.WallMaterial.WOOD;       break;
+                case "Brick":     mat = moldsim.model.WallMaterial.BRICK;      break;
+                case "Document": mat = moldsim.model.WallMaterial.DOCUMENT;  break;
+                default:          mat = moldsim.model.WallMaterial.PLASTER;    break;
+            }
+            environment.setMaterial(mat);
+            for (int row = 0; row < modelGrid.getHeight(); row++)
+                for (int col = 0; col < modelGrid.getWidth(); col++)
+                    modelGrid.getCell(col, row).setWallMaterial(mat);
+        });
         // Création des étagères par défaut
         createDefaultShelves();
 
@@ -91,16 +121,18 @@ public class GridController {
             int h      = shelf.getHeight();
             int planks = shelf.getPlankCount();
             double plankSpacing = (double) h / (planks + 1);
-
-            // Uniquement les planches horizontales = bois
+        
+                    // Planches = bois
             for (int p = 0; p < planks; p++) {
                 int plankRow = startY + (int) ((p + 1) * plankSpacing);
                 for (int col = startX; col < startX + w; col++) {
                     gridView.setCellType(plankRow, col, GridView.TYPE_SHELF);
+                    moldsim.model.Cell cell = modelGrid.getCell(col, plankRow);
+                    if (cell != null) cell.setWallMaterial(moldsim.model.WallMaterial.WOOD);
                 }
             }
 
-            // Les espaces entre les planches = documents
+            // Espaces entre planches = documents
             for (int p = 0; p < planks; p++) {
                 int plankRow     = startY + (int) ((p + 1) * plankSpacing);
                 int prevPlankRow = p == 0
@@ -110,11 +142,14 @@ public class GridController {
                 for (int row = prevPlankRow + 1; row < plankRow; row++) {
                     for (int col = startX; col < startX + w; col++) {
                         gridView.setCellType(row, col, GridView.TYPE_DOCUMENT);
+                        moldsim.model.Cell cell = modelGrid.getCell(col, row);
+                        if (cell != null) cell.setWallMaterial(moldsim.model.WallMaterial.DOCUMENT);
                     }
                 }
             }
         }
     }
+
     /** Remplit une étagère avec des documents. */
     private void populateShelf(Shelf shelf, String prefix) {
         DocumentValue[] values = DocumentValue.values();

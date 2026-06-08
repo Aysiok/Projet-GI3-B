@@ -8,9 +8,12 @@ import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.input.MouseButton;
 import javafx.scene.paint.Color;
+import moldsim.Simulation.Simulation;
 import moldsim.model.Document;
+import moldsim.model.Grid;
 import moldsim.model.Shelf;
-
+import moldsim.Simulation.Simulation;
+import moldsim.model.Grid;
 /**
  * Graphical 2D grid drawn with JavaFX Canvas.
  */
@@ -27,6 +30,8 @@ public class GridView extends Canvas {
     private final int[][] cellType; // 0=wall, 1=shelf, 2=document
     private final Random random;
     private List<Shelf> shelves = new ArrayList<>();
+    private Simulation simulation;
+    private Grid modelGrid;
     private CellClickListener cellClickListener;
     public static final int TYPE_WALL     = 0;
     public static final int TYPE_SHELF    = 1;
@@ -60,6 +65,11 @@ public class GridView extends Canvas {
         this.shelves = shelves;
     }
 
+    public void setSimulation(Simulation simulation, Grid modelGrid) {
+    this.simulation = simulation;
+    this.modelGrid  = modelGrid;
+}
+
     public void setCellType(int row, int column, int type) {
     if (isInside(row, column)) {
         cellType[row][column] = type;
@@ -75,51 +85,36 @@ public class GridView extends Canvas {
         if (!isInside(row, column)) return;
         if (cells[row][column] == HEALTHY) {
             cells[row][column] = INFECTED;
+            if (modelGrid != null) {
+                moldsim.model.Cell cell = modelGrid.getCell(column, row);
+                if (cell != null) cell.infect(moldsim.model.MoldSpecies.CLADOSPORIUM);
+            }
         } else if (cells[row][column] == INFECTED) {
             cells[row][column] = HEALTHY;
+            if (modelGrid != null) {
+                moldsim.model.Cell cell = modelGrid.getCell(column, row);
+                if (cell != null) cell.cure();
+            }
         }
         draw();
     }
 
-    public void stepSimulation() {
-        int[][] nextCells = copyCells();
-        for (int row = 0; row < rows; row++) {
-            for (int column = 0; column < columns; column++) {
-                if (cells[row][column] == INFECTED) {
-                    spreadToNeighbors(nextCells, row, column);
+        public void stepSimulation() {
+        if (simulation != null) {
+            simulation.step();
+            for (int row = 0; row < rows; row++) {
+                for (int col = 0; col < columns; col++) {
+                    moldsim.model.Cell cell = modelGrid.getCell(col, row);
+                    if (cell == null) continue;
+                    switch (cell.getState()) {
+                        case INFECTED: cells[row][col] = INFECTED; break;
+                        case DEAD:     cells[row][col] = DEAD;     break;
+                        default:       cells[row][col] = HEALTHY;  break;
+                    }
                 }
             }
         }
-        copyIntoCells(nextCells);
         draw();
-    }
-
-    private void spreadToNeighbors(int[][] nextCells, int row, int column) {
-        for (int deltaRow = -1; deltaRow <= 1; deltaRow++) {
-            for (int deltaColumn = -1; deltaColumn <= 1; deltaColumn++) {
-                if (deltaRow == 0 && deltaColumn == 0) continue;
-
-                int neighborRow    = row + deltaRow;
-                int neighborColumn = column + deltaColumn;
-
-                if (isInside(neighborRow, neighborColumn)
-                        && cells[neighborRow][neighborColumn] == HEALTHY
-                        && cellType[neighborRow][neighborColumn] != TYPE_SHELF) {
-
-                    // Probabilité différente selon le type
-                    double probability;
-                    if (cellType[neighborRow][neighborColumn] == TYPE_DOCUMENT) {
-                        probability = 0.30; // documents plus vulnérables
-                    } else {
-                        probability = 0.15; // mur normal
-                    }
-
-                    if (random.nextDouble() < probability) {
-                        nextCells[neighborRow][neighborColumn] = INFECTED;
-                    }
-                }
-            }
-        }
     }
     public void reset() {
         for (int row = 0; row < rows; row++)
