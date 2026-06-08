@@ -210,4 +210,30 @@ public class GridView extends Canvas {
     public interface CellClickListener {
         void onCellClicked(int row, int column);
     }
+
+    public int[][] copyGridState() {
+        int[][] copy = new int[rows][columns];
+
+        for (int row = 0; row < rows; row++) {
+            for (int column = 0; column < columns; column++) {
+                copy[row][column] = cells[row][column];
+            }
+        }
+
+        return copy;
+    }
+
+    public void restoreGridState(int[][] savedState) {
+        if (savedState == null) {
+            return;
+        }
+
+        for (int row = 0; row < rows; row++) {
+            for (int column = 0; column < columns; column++) {
+                cells[row][column] = savedState[row][column];
+            }
+        }
+
+        draw();
+    }
 }

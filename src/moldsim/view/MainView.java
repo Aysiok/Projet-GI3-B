@@ -28,12 +28,17 @@ public class MainView extends BorderPane {
     private Button stepButton;
     private Button exportPdfButton;
     private Slider speedSlider;
+    private Button previousStepButton;
+    private Button nextStepButton;
+    
 
     // ── Status bar ────────────────────────────────────────────
     private Label statusLabel;
     private Label generationLabel;
     private Label infectedLabel;
     private Label riskLabel;
+    private Label weekLabel;
+    private Label stepLabel;
 
     // ── room-wall-display ────────────────────────────────────────────
     private Label currentLocationLabel;
@@ -141,11 +146,21 @@ public class MainView extends BorderPane {
 
         // Stats
         sidebar.getChildren().add(sectionLabel("Statistics"));
-        generationLabel = statLabel("Generation: 0");
-        infectedLabel   = statLabel("Infected: 0 (0%)");
-        riskLabel       = statLabel("Risk: Low");
-        sidebar.getChildren().addAll(generationLabel, infectedLabel, riskLabel);
 
+        generationLabel = statLabel("Step: 0");
+        weekLabel       = statLabel("Time elapsed: 0 week(s)");
+        stepLabel       = statLabel("Saved step: 0 / 0");
+        infectedLabel   = statLabel("Infected: 0 (0.0%)");
+        riskLabel       = statLabel("Risk: Low");
+
+        sidebar.getChildren().addAll(
+            generationLabel,
+            weekLabel,
+            stepLabel,
+            infectedLabel,
+            riskLabel
+        );
+        
         return sidebar;
     }
 
@@ -170,6 +185,8 @@ public class MainView extends BorderPane {
         resetButton     = new Button("↺ Reset");
         stepButton      = new Button("⏭ Step");
         exportPdfButton = new Button("📄 Export PDF");
+        previousStepButton = new Button("◀ Previous");
+        nextStepButton = new Button("Next ▶");
 
         playButton.setStyle("-fx-background-color: #1D9E75; -fx-text-fill: white;");
         pauseButton.setStyle("-fx-background-color: #BA7517; -fx-text-fill: white;");
@@ -183,14 +200,22 @@ public class MainView extends BorderPane {
         speedSlider.setPrefWidth(100);
 
         buttons.getChildren().addAll(
-            playButton, pauseButton, stepButton, resetButton,
-            exportPdfButton, speedLabel, speedSlider
+            playButton,
+            pauseButton,
+            previousStepButton,
+            stepButton,
+            nextStepButton,
+            resetButton,
+            exportPdfButton,
+            speedLabel,
+            speedSlider
         );
 
         statusLabel = new Label("Ready — place a contamination focus on the grid.");
         statusLabel.setStyle("-fx-text-fill: #888; -fx-font-size: 11;");
 
         bottom.getChildren().addAll(buttons, statusLabel);
+        
         return bottom;
     }
 
@@ -244,4 +269,21 @@ public class MainView extends BorderPane {
     public void updateCurrentLocationLabel(String locationText) {
         currentLocationLabel.setText("Current view: " + locationText);
     }
+
+    public Label getWeekLabel() {
+    return weekLabel;
+    }   
+
+    public Label getStepLabel() {
+        return stepLabel;
+    }
+
+    public Button getPreviousStepButton() {
+        return previousStepButton;
+    }
+
+    public Button getNextStepButton() {
+        return nextStepButton;
+    }
+
 }
