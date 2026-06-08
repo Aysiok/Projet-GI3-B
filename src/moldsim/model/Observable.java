@@ -1,6 +1,4 @@
 package moldsim.model;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Observable interface for the Observer design pattern.

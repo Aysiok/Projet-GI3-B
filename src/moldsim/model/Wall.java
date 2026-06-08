@@ -111,4 +111,14 @@ public class Wall implements Serializable {
         return material;
     }
     
+    public double getContaminationRate() {
+    int infected = 0;
+    for (Cell[] row : grid) {
+        for (Cell cell : row) {
+            if (cell.isInfected()) infected++;
+        }
+    }
+    return (double) infected / (width * height);
+}
+
 }
