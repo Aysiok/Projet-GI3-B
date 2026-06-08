@@ -5,60 +5,48 @@ import java.util.List;
 import java.util.Random;
 
 /**
- * partie asma
- * la grille en 2d qui servira au javafx
+ * le mur en 2d qui servira au javafx
  */
-public class Grid implements Serializable {
+public class Wall implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
     private final int width;
     private final int height;
-    private final boolean toric;          // si true, les bords se rebouclent
-    private NeighborhoodMode neighborhoodMode;
-    private final Cell[][] cells;
+    private final Cell[][] grid;
+    private final WallMaterial material;
 
-    /** grille avec des cellules same */
-    public Grid(int width,
-                int height,
-                boolean toric,
-                NeighborhoodMode neighborhoodMode) {
+    /** mur avec des cellules same */
+    public Wall(int width, int height, WallMaterial material) {
         if (width <= 0 || height <= 0) {
             throw new IllegalArgumentException("Grid size must be positive");
         }
-        if (neighborhoodMode == null) {
-            throw new IllegalArgumentException("Neighborhood mode cannot be null");
-        }
         this.width = width;
         this.height = height;
-        this.toric = toric;
-        this.neighborhoodMode = neighborhoodMode;
-        this.cells = new Cell[height][width];
+        this.material = material;
+        this.grid = new Cell[height][width];
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
-                cells[y][x] = new Cell(x, y);
+                grid[y][x] = new Cell(x, y);
             }
         }
     }
 
+    public Wall(int width, int height){
+        this(width, height, WallMaterial.CONCRETE);
+    }
+
+
     public Cell getCell(int x, int y) {
-        if (toric) {
-            x = wrap(x, width);
-            y = wrap(y, height);
-        } else if (!inBounds(x, y)) {
-            return null;
-        }
-        return cells[y][x];
+        return grid[y][x];
     }
 
     /** voisins d'une cellule */
     public List<Cell> getNeighbors(int x, int y) {
         List<Cell> neighbors = new ArrayList<>(8);
-        int[][] offsets = (neighborhoodMode == NeighborhoodMode.FOUR)
-                ? new int[][] { {0,-1}, {0,1}, {-1,0}, {1,0} }
-                : new int[][] {
+        int[][] offsets = new int[][] {
                         {-1,-1}, {0,-1}, {1,-1},
-                        {-1, 0},          {1, 0},
+                        {-1, 0},         {1, 0},
                         {-1, 1}, {0, 1}, {1, 1}
                 };
         for (int[] offset : offsets) {
@@ -87,7 +75,7 @@ public class Grid implements Serializable {
         while (infected < toInfect && safety-- > 0) {
             int x = random.nextInt(width);
             int y = random.nextInt(height);
-            Cell c = cells[y][x];
+            Cell c = grid[y][x];
             if (!c.isInfected() && c.isAlive()) {
                 c.infect(species);
                 infected++;
@@ -99,39 +87,28 @@ public class Grid implements Serializable {
     public void reset(double humidity, double temperature) {
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
-                Cell c = cells[y][x];
+                Cell c = grid[y][x];
                 c.cure();
                 c.setAge(0);
             }
         }
     }
 
-
     /** dans la grille ? */
     public boolean inBounds(int x, int y) {
         return x >= 0 && x < width && y >= 0 && y < height;
     }
 
-    /** quand c'est des valeurs négatives */
-    private static int wrap(int value, int size) {
-        int r = value % size;
-        return (r < 0) ? r + size : r;
-    }
-
     public int getWidth() { return width; }
     public int getHeight() { return height; }
-    public boolean isToric() { return toric; }
-    public NeighborhoodMode getNeighborhoodMode() { return neighborhoodMode; }
-
-    public void setNeighborhoodMode(NeighborhoodMode mode) {
-        if (mode == null) {
-            throw new IllegalArgumentException("Mode cannot be null");
-        }
-        this.neighborhoodMode = mode;
-    }
 
     /** tableau en 2d */
     public Cell[][] getCells() {
-        return cells;
+        return grid;
     }
+
+    public WallMaterial getMaterial(){
+        return material;
+    }
+    
 }
