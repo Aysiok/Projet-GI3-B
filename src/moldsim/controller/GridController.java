@@ -27,6 +27,9 @@ public class GridController {
     private moldsim.model.Environment environment;
     private moldsim.Simulation.Simulation simulation;
 
+    
+    private boolean updatingTimeSlider;
+
     public GridController(MainView mainView) {
         this.mainView = mainView;
         this.gridView = mainView.getGridView();
@@ -35,6 +38,7 @@ public class GridController {
         this.locationContext = new LocationContext("Archive Room A", "North Wall");
         this.history = new ArrayList<>();
         this.currentStepIndex = 0;
+        this.updatingTimeSlider = false;
     }
 
     public void initialize() {
@@ -83,13 +87,23 @@ public class GridController {
         mainView.getStepButton().setOnAction(event -> step());
         mainView.getResetButton().setOnAction(event -> reset());
         mainView.getPreviousStepButton().setOnAction(event -> previousStep());
-        mainView.getNextStepButton().setOnAction(event -> nextStep());
+
+        mainView.getTimeSlider().valueProperty().addListener((obs, oldValue, newValue) -> {
+            if (updatingTimeSlider) {
+                return;
+            }
+
+            int targetIndex = newValue.intValue();
+            goToStep(targetIndex);
+        });
 
         gridView.setCellClickListener((row, column) -> {
             gridView.toggleInfection(row, column);
-            updateStatistics();
-            mainView.getStatusLabel().setText(
-                "Cell modified at (" + row + ", " + column + ").");
+
+            markCurrentStepAsModified(
+                "Cell modified at week " + currentStepIndex
+                + ". Future steps were cleared."
+            );
         });
 
         updateStatistics();
@@ -170,24 +184,11 @@ public class GridController {
     }
 
     private void step() {
-        gridView.stepSimulation();
-
-        int nextStep = currentStepIndex + 1;
-        int nextWeek = nextStep;
-
-        int[][] gridState = gridView.copyGridState();
-
         if (currentStepIndex < history.size() - 1) {
-            history = new ArrayList<>(history.subList(0, currentStepIndex + 1));
+            goToStep(currentStepIndex + 1);
+        } else {
+            advanceOneNewStep();
         }
-
-        history.add(new SimulationSnapshot(nextStep, nextWeek, gridState));
-        currentStepIndex = history.size() - 1;
-
-        updateStatistics();
-        updateTimeDisplay();
-
-        mainView.getStatusLabel().setText("Simulation advanced to week " + nextWeek + ".");
     }
 
     private void previousStep() {
@@ -196,38 +197,27 @@ public class GridController {
             return;
         }
 
-        currentStepIndex--;
-
-        SimulationSnapshot snapshot = history.get(currentStepIndex);
-        gridView.restoreGridState(snapshot.getCellStates());
-
-        updateStatistics();
-        updateTimeDisplay();
-
-        mainView.getStatusLabel().setText("Returned to week " + snapshot.getWeek() + ".");
+        goToStep(currentStepIndex - 1);
     }
 
-    private void nextStep() {
-        if (currentStepIndex >= history.size() - 1) {
-            mainView.getStatusLabel().setText("No next saved step.");
-            return;
-        }
-
-        currentStepIndex++;
-
-        SimulationSnapshot snapshot = history.get(currentStepIndex);
-        gridView.restoreGridState(snapshot.getCellStates());
-
-        updateStatistics();
-        updateTimeDisplay();
-
-        mainView.getStatusLabel().setText("Moved to week " + snapshot.getWeek() + ".");
-    }
 
     private void reset() {
         generation = 0;
+        currentStepIndex = 0;
+        
+
+        history.clear();
+
         gridView.reset();
+        markShelvesOnGrid();
+        gridView.draw();
+
+        saveCurrentSnapshot();
+
         updateStatistics();
+        updateTimeDisplay();
+        updateTimeSlider();
+
         mainView.getStatusLabel().setText("Simulation reset.");
     }
 
@@ -236,7 +226,6 @@ public class GridController {
         int total    = gridView.getRows() * gridView.getColumns();
         double pct   = total > 0 ? infected * 100.0 / total : 0.0;
 
-        mainView.getGenerationLabel().setText("Generation: " + generation);
         mainView.getInfectedLabel().setText(
             String.format("Infected: %d (%.1f%%)", infected, pct));
 
@@ -270,21 +259,97 @@ public class GridController {
 
         SimulationSnapshot snapshot = new SimulationSnapshot(step, week, gridState);
 
+        history.add(snapshot);
+        currentStepIndex = history.size() - 1;
+
+        updateTimeSlider();
+    }
+
+    private void updateTimeDisplay() {
+    int week = currentStepIndex;
+
+    mainView.getGenerationLabel().setText("Step: " + currentStepIndex);
+    mainView.getWeekLabel().setText("Time elapsed: " + week + " week(s)");
+    mainView.getStepLabel().setText(
+        "History: " + currentStepIndex + " / " + (history.size() - 1)
+    );
+}
+
+    private void goToStep(int targetIndex) {
+        if (targetIndex < 0 || targetIndex >= history.size()) {
+            return;
+        }
+
+        currentStepIndex = targetIndex;
+
+        SimulationSnapshot snapshot = history.get(currentStepIndex);
+        gridView.restoreGridState(snapshot.getCellStates());
+
+       
+
+        updateStatistics();
+        updateTimeDisplay();
+        updateTimeSlider();
+
+        mainView.getStatusLabel().setText("Moved to week " + snapshot.getWeek() + ".");
+    }
+
+    private void markCurrentStepAsModified(String message) {
+        
+
+        replaceCurrentSnapshot();
+
         if (currentStepIndex < history.size() - 1) {
             history = new ArrayList<>(history.subList(0, currentStepIndex + 1));
         }
 
-        history.add(snapshot);
-        currentStepIndex = history.size() - 1;
+        
+
+        updateStatistics();
+        updateTimeDisplay();
+        updateTimeSlider();
+
+        mainView.getStatusLabel().setText(message);
     }
 
-    private void updateTimeDisplay() {
+    private void replaceCurrentSnapshot() {
         int week = currentStepIndex;
+        int[][] gridState = gridView.copyGridState();
 
-        mainView.getGenerationLabel().setText("Step: " + currentStepIndex);
-        mainView.getWeekLabel().setText("Time elapsed: " + week + " week(s)");
-        mainView.getStepLabel().setText("Saved step: " + currentStepIndex + " / " + (history.size() - 1));
+        SimulationSnapshot updatedSnapshot =
+            new SimulationSnapshot(currentStepIndex, week, gridState);
+
+        history.set(currentStepIndex, updatedSnapshot);
     }
 
+    private void advanceOneNewStep() {
+        gridView.syncModelFromView();
+        gridView.stepSimulation();
+
+        int nextStep = currentStepIndex + 1;
+        int nextWeek = nextStep;
+
+        int[][] gridState = gridView.copyGridState();
+
+        history.add(new SimulationSnapshot(nextStep, nextWeek, gridState));
+        currentStepIndex = history.size() - 1;
+
+        updateStatistics();
+        updateTimeDisplay();
+        updateTimeSlider();
+
+        mainView.getStatusLabel().setText("Advanced to week " + nextWeek + ".");
+    }
+
+    private void updateTimeSlider() {
+        updatingTimeSlider = true;
+
+        int maxIndex = Math.max(0, history.size() - 1);
+
+        mainView.getTimeSlider().setMax(maxIndex);
+        mainView.getTimeSlider().setValue(currentStepIndex);
+
+        updatingTimeSlider = false;
+    }
 
 }

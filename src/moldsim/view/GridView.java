@@ -82,24 +82,21 @@ public class GridView extends Canvas {
     }
 
     public void toggleInfection(int row, int column) {
-        if (!isInside(row, column)) return;
+        if (!isInside(row, column)) {
+            return;
+        }
+
         if (cells[row][column] == HEALTHY) {
             cells[row][column] = INFECTED;
-            if (modelGrid != null) {
-                moldsim.model.Cell cell = modelGrid.getCell(column, row);
-                if (cell != null) cell.infect(moldsim.model.MoldSpecies.CLADOSPORIUM);
-            }
         } else if (cells[row][column] == INFECTED) {
             cells[row][column] = HEALTHY;
-            if (modelGrid != null) {
-                moldsim.model.Cell cell = modelGrid.getCell(column, row);
-                if (cell != null) cell.cure();
-            }
         }
+
+        syncModelCellFromView(row, column);
         draw();
     }
 
-        public void stepSimulation() {
+    public void stepSimulation() {
         if (simulation != null) {
             simulation.step();
             for (int row = 0; row < rows; row++) {
@@ -116,11 +113,13 @@ public class GridView extends Canvas {
         }
         draw();
     }
+
     public void reset() {
         for (int row = 0; row < rows; row++)
             for (int column = 0; column < columns; column++)
                 cells[row][column] = HEALTHY;
         // on ne remet PAS cellType à zéro — la structure reste
+        syncModelFromView();
         draw();
     }
 
@@ -224,11 +223,61 @@ public class GridView extends Canvas {
         }
 
         for (int row = 0; row < rows; row++) {
-            for (int column = 0; column < columns; column++) {
-                cells[row][column] = savedState[row][column];
+            for (int col = 0; col < columns; col++) {
+                cells[row][col] = savedState[row][col];
             }
         }
 
+        syncModelFromView();
         draw();
     }
+
+    public void syncModelFromView() {
+        if (modelGrid == null) {
+            return;
+        }
+
+        for (int row = 0; row < rows; row++) {
+            for (int col = 0; col < columns; col++) {
+                syncModelCellFromView(row, col);
+            }
+        }
+    }
+
+    private void syncModelCellFromView(int row, int col) {
+        if (modelGrid == null) {
+            return;
+        }
+
+        moldsim.model.Cell cell = modelGrid.getCell(col, row);
+
+        if (cell == null) {
+            return;
+        }
+
+        int state = cells[row][col];
+        int type = cellType[row][col];
+
+        // Synchronisation de l'état biologique
+        if (state == INFECTED) {
+            cell.infect(moldsim.model.MoldSpecies.CLADOSPORIUM);
+        } else if (state == DEAD) {
+            cell.kill();
+        } else {
+            cell.setState(moldsim.model.CellState.HEALTHY);
+            cell.setSpecies(null);
+            cell.setMoldLevel(0.0);
+            cell.setAge(0);
+        }
+
+        // Synchronisation du matériau
+        if (type == TYPE_SHELF) {
+            cell.setWallMaterial(moldsim.model.WallMaterial.WOOD);
+        } else if (type == TYPE_DOCUMENT) {
+            cell.setWallMaterial(moldsim.model.WallMaterial.DOCUMENT);
+        } else {
+            cell.setWallMaterial(moldsim.model.WallMaterial.PLASTER);
+        }
+    }
+
 }

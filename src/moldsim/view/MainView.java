@@ -29,7 +29,7 @@ public class MainView extends BorderPane {
     private Button exportPdfButton;
     private Slider speedSlider;
     private Button previousStepButton;
-    private Button nextStepButton;
+    private Slider timeSlider;
     
 
     // ── Status bar ────────────────────────────────────────────
@@ -160,7 +160,7 @@ public class MainView extends BorderPane {
             infectedLabel,
             riskLabel
         );
-        
+
         return sidebar;
     }
 
@@ -186,7 +186,16 @@ public class MainView extends BorderPane {
         stepButton      = new Button("⏭ Step");
         exportPdfButton = new Button("📄 Export PDF");
         previousStepButton = new Button("◀ Previous");
-        nextStepButton = new Button("Next ▶");
+        Label timeLabel = new Label("Time:");
+        timeLabel.setStyle("-fx-text-fill: #ccc; -fx-font-size: 11;");
+
+        timeSlider = new Slider(0, 0, 0);
+        timeSlider.setPrefWidth(180);
+        timeSlider.setShowTickLabels(true);
+        timeSlider.setShowTickMarks(true);
+        timeSlider.setMajorTickUnit(1);
+        timeSlider.setMinorTickCount(0);
+        timeSlider.setSnapToTicks(true);
 
         playButton.setStyle("-fx-background-color: #1D9E75; -fx-text-fill: white;");
         pauseButton.setStyle("-fx-background-color: #BA7517; -fx-text-fill: white;");
@@ -204,11 +213,12 @@ public class MainView extends BorderPane {
             pauseButton,
             previousStepButton,
             stepButton,
-            nextStepButton,
             resetButton,
             exportPdfButton,
             speedLabel,
-            speedSlider
+            speedSlider,
+            timeLabel,
+            timeSlider
         );
 
         statusLabel = new Label("Ready — place a contamination focus on the grid.");
@@ -282,8 +292,10 @@ public class MainView extends BorderPane {
         return previousStepButton;
     }
 
-    public Button getNextStepButton() {
-        return nextStepButton;
+    public Slider getTimeSlider() {
+        return timeSlider;
     }
+
+    
 
 }
