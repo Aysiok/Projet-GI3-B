@@ -1,4 +1,4 @@
-package moldsim.Simulation;
+package moldsim.controller;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -10,12 +10,12 @@ import moldsim.model.Environment;
 import moldsim.model.Grid;
 import moldsim.model.MoldSpecies;
 
-public class Simulation {
+public class SimulationController {
     private final Grid grid;
     private final Environment environment;
     private final Random random;
 
-    public Simulation(Grid grid, Environment environment) {
+    public SimulationController(Grid grid, Environment environment) {
         this.grid = grid;
         this.environment = environment;
         this.random = new Random();

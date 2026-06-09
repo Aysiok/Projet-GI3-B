@@ -10,7 +10,6 @@ import moldsim.model.SimulationSnapshot;
 
 import java.util.ArrayList;
 import java.util.List;
-import moldsim.Simulation.Simulation;
 /**
  * Controller for the grid interface.
  * Connects MainView controls to GridView actions.
@@ -25,7 +24,7 @@ public class GridController {
     private int currentStepIndex;
     private moldsim.model.Grid modelGrid;
     private moldsim.model.Environment environment;
-    private moldsim.Simulation.Simulation simulation;
+    private moldsim.controller.SimulationController simulation;
 
     
     private boolean updatingTimeSlider;
@@ -47,7 +46,7 @@ public class GridController {
         environment.setHumidity(mainView.getHumiditySlider().getValue());
         environment.setTemperature(mainView.getTemperatureSlider().getValue());
         environment.setVentilation(mainView.getVentilationSlider().getValue());
-        simulation  = new moldsim.Simulation.Simulation(modelGrid, environment);
+        simulation  = new moldsim.controller.SimulationController(modelGrid, environment);
         gridView.setSimulation(simulation, modelGrid);
 
         mainView.getHumiditySlider().valueProperty().addListener((obs, o, n) ->

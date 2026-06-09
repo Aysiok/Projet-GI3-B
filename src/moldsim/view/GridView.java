@@ -8,11 +8,10 @@ import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.input.MouseButton;
 import javafx.scene.paint.Color;
-import moldsim.Simulation.Simulation;
+import moldsim.controller.SimulationController;
 import moldsim.model.Document;
 import moldsim.model.Grid;
 import moldsim.model.Shelf;
-import moldsim.Simulation.Simulation;
 import moldsim.model.Grid;
 /**
  * Graphical 2D grid drawn with JavaFX Canvas.
@@ -30,7 +29,7 @@ public class GridView extends Canvas {
     private final int[][] cellType; // 0=wall, 1=shelf, 2=document
     private final Random random;
     private List<Shelf> shelves = new ArrayList<>();
-    private Simulation simulation;
+    private SimulationController simulation;
     private Grid modelGrid;
     private CellClickListener cellClickListener;
     public static final int TYPE_WALL     = 0;
@@ -65,7 +64,7 @@ public class GridView extends Canvas {
         this.shelves = shelves;
     }
 
-    public void setSimulation(Simulation simulation, Grid modelGrid) {
+    public void setSimulation(SimulationController simulation, Grid modelGrid) {
     this.simulation = simulation;
     this.modelGrid  = modelGrid;
 }
