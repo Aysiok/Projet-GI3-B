@@ -9,10 +9,9 @@ import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.input.MouseButton;
 import javafx.scene.paint.Color;
 import moldsim.controller.SimulationController;
-import moldsim.model.Document;
 import moldsim.model.Grid;
 import moldsim.model.Shelf;
-import moldsim.model.Grid;
+
 /**
  * Graphical 2D grid drawn with JavaFX Canvas.
  */
@@ -32,6 +31,14 @@ public class GridView extends Canvas {
     private SimulationController simulation;
     private Grid modelGrid;
     private CellClickListener cellClickListener;
+    private boolean placementMode = false;
+    private int ghostRow = -1;
+    private int ghostCol = -1;
+    private int ghostWidth  = 4;
+    private int ghostHeight = 20;
+    private ShelfPlacementListener shelfPlacementListener;
+    private moldsim.model.DocumentValue nextShelfValue = moldsim.model.DocumentValue.MEDIUM;
+    private final moldsim.model.DocumentValue[][] cellValue;
     public static final int TYPE_WALL     = 0;
     public static final int TYPE_SHELF    = 1;
     public static final int TYPE_DOCUMENT = 2;
@@ -42,38 +49,82 @@ public class GridView extends Canvas {
         this.cellSize  = cellSize;
         this.cells     = new int[rows][columns];
         this.cellType = new int[rows][columns]; // tout à 0 (wall) par défaut
+        this.cellValue = new moldsim.model.DocumentValue[rows][columns];
         this.random    = new Random();
 
         setWidth(columns * cellSize);
         setHeight(rows * cellSize);
 
         setOnMouseClicked(event -> {
-            if (event.getButton() == MouseButton.PRIMARY && cellClickListener != null) {
+            if (event.getButton() == MouseButton.PRIMARY) {
                 int column = (int) (event.getX() / cellSize);
                 int row    = (int) (event.getY() / cellSize);
-                if (isInside(row, column)) {
+                if (placementMode) {
+                    if (shelfPlacementListener != null) {
+                        shelfPlacementListener.onShelfPlaced(row, column, ghostWidth, ghostHeight);
+                    }
+                    disablePlacementMode();
+                } else if (cellClickListener != null && isInside(row, column)) {
                     cellClickListener.onCellClicked(row, column);
                 }
             }
+                if (event.getButton() == MouseButton.SECONDARY) {
+                int column = (int) (event.getX() / cellSize);
+                int row    = (int) (event.getY() / cellSize);
+                if (shelfPlacementListener != null) {
+                    shelfPlacementListener.onShelfRemoved(row, column);
+                }
+            }
         });
-
-        draw();
+        setOnMouseMoved(event -> {
+            if (placementMode) {
+            ghostCol = (int) (event.getX() / cellSize);
+            ghostRow = (int) (event.getY() / cellSize);
+            draw();
+            }
+        });
+         draw();
     }
 
     public void setShelves(List<Shelf> shelves) {
         this.shelves = shelves;
     }
-
-    public void setSimulation(SimulationController simulation, Grid modelGrid) {
-    this.simulation = simulation;
-    this.modelGrid  = modelGrid;
-}
-
-    public void setCellType(int row, int column, int type) {
-    if (isInside(row, column)) {
-        cellType[row][column] = type;
+    public void enablePlacementMode(int width, int height) {
+        this.placementMode = true;
+        this.ghostWidth    = width;
+        this.ghostHeight   = height;
     }
+    public void setNextShelfValue(moldsim.model.DocumentValue value) {
+    this.nextShelfValue = value;
 }
+
+    public moldsim.model.DocumentValue getNextShelfValue() {
+        return nextShelfValue;
+    }
+
+    public void disablePlacementMode() {
+        this.placementMode = false;
+        this.ghostRow = -1;
+        this.ghostCol = -1;
+    }
+
+    public void setCellValue(int row, int col, moldsim.model.DocumentValue value) {
+        if (isInside(row, col)) cellValue[row][col] = value;
+    }
+
+    public void setShelfPlacementListener(ShelfPlacementListener listener) {
+        this.shelfPlacementListener = listener;
+    }
+        public void setSimulation(SimulationController simulation, Grid modelGrid) {
+        this.simulation = simulation;
+        this.modelGrid  = modelGrid;
+    }
+
+        public void setCellType(int row, int column, int type) {
+        if (isInside(row, column)) {
+            cellType[row][column] = type;
+        }
+    }
 
 
     public void setCellClickListener(CellClickListener listener) {
@@ -139,9 +190,22 @@ public class GridView extends Canvas {
         gc.fillRect(0, 0, getWidth(), getHeight());
 
         // Cellules
-        for (int row = 0; row < rows; row++)
-            for (int column = 0; column < columns; column++)
+        for (int row = 0; row < rows; row++){
+            for (int column = 0; column < columns; column++){
                 drawCell(gc, row, column);
+            }
+        }
+        if (placementMode && ghostRow >= 0 && ghostCol >= 0) {
+            double gx = ghostCol * cellSize;
+            double gy = ghostRow * cellSize;
+            double gw = ghostWidth  * cellSize;
+            double gh = ghostHeight * cellSize;
+            gc.setFill(Color.rgb(122, 98, 72, 0.4));
+            gc.fillRect(gx, gy, gw, gh);
+            gc.setStroke(Color.rgb(122, 98, 72, 0.9));
+            gc.setLineWidth(2);
+            gc.strokeRect(gx, gy, gw, gh);
+        }
     }
 
     private void drawCell(GraphicsContext gc, int row, int column) {
@@ -161,9 +225,19 @@ public class GridView extends Canvas {
         } else if (state == DEAD) {
             gc.setFill(Color.rgb(70, 70, 70));
         } else {
-            // Sain — couleur selon le type
+    // Sain — couleur selon le type
             if (type == TYPE_DOCUMENT) {
-                gc.setFill(Color.rgb(255, 255, 255)); // jaune parchemin
+                moldsim.model.DocumentValue val = cellValue[row][column];
+                if (val == null) {
+                    gc.setFill(Color.rgb(255, 248, 220));
+                } else {
+                    gc.setFill(switch (val) {
+                        case LOW      -> Color.rgb(200, 200, 180);
+                        case MEDIUM   -> Color.rgb(220, 200, 140);
+                        case HIGH     -> Color.rgb(240, 180, 80);
+                        case CRITICAL -> Color.rgb(220, 80, 80);
+                    });
+                }
             } else if (type == TYPE_SHELF) {
                 gc.setFill(Color.rgb(101, 67, 33));   // marron bois
             } else {
@@ -278,5 +352,8 @@ public class GridView extends Canvas {
             cell.setWallMaterial(moldsim.model.WallMaterial.PLASTER);
         }
     }
-
+    public interface ShelfPlacementListener {
+        void onShelfPlaced(int row, int col, int width, int height);
+        void onShelfRemoved(int row, int col); // ← ajoute ça
+}
 }

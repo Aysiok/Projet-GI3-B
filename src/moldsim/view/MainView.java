@@ -30,6 +30,7 @@ public class MainView extends BorderPane {
     private Slider speedSlider;
     private Button previousStepButton;
     private Slider timeSlider;
+    private Button newShelfButton;
     
 
     // ── Status bar ────────────────────────────────────────────
@@ -185,6 +186,8 @@ public class MainView extends BorderPane {
         resetButton     = new Button("↺ Reset");
         stepButton      = new Button("⏭ Step");
         exportPdfButton = new Button("📄 Export PDF");
+        newShelfButton = new Button("📦 New Shelf");
+        newShelfButton.setStyle("-fx-background-color: #7A6248; -fx-text-fill: white;");
         previousStepButton = new Button("◀ Previous");
         Label timeLabel = new Label("Time:");
         timeLabel.setStyle("-fx-text-fill: #ccc; -fx-font-size: 11;");
@@ -218,7 +221,8 @@ public class MainView extends BorderPane {
             speedLabel,
             speedSlider,
             timeLabel,
-            timeSlider
+            timeSlider,
+            newShelfButton
         );
 
         statusLabel = new Label("Ready — place a contamination focus on the grid.");
@@ -294,6 +298,9 @@ public class MainView extends BorderPane {
 
     public Slider getTimeSlider() {
         return timeSlider;
+    }
+    public Button getNewShelfButton() { 
+        return newShelfButton;
     }
 
     

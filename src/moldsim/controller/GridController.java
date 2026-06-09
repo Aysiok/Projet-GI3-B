@@ -1,6 +1,5 @@
 package moldsim.controller;
 
-import moldsim.model.Document;
 import moldsim.model.DocumentValue;
 import moldsim.model.Shelf;
 import moldsim.view.GridView;
@@ -69,8 +68,7 @@ public class GridController {
                 for (int col = 0; col < modelGrid.getWidth(); col++)
                     modelGrid.getCell(col, row).setWallMaterial(mat);
         });
-        // Création des étagères par défaut
-        createDefaultShelves();
+
 
         // Passe les étagères à la vue pour le rendu
         gridView.setShelves(shelves);
@@ -85,6 +83,42 @@ public class GridController {
         mainView.getPauseButton().setOnAction(event -> pause());
         mainView.getStepButton().setOnAction(event -> step());
         mainView.getResetButton().setOnAction(event -> reset());
+        mainView.getNewShelfButton().setOnAction(event -> openNewShelfDialog());
+        mainView.getExportPdfButton().setOnAction(event -> exportPdf());
+
+        gridView.setShelfPlacementListener(new GridView.ShelfPlacementListener() {
+    @Override
+    public void onShelfPlaced(int row, int col, int width, int height) {
+        String id = "S" + (shelves.size() + 1);
+        int planks = Math.max(1, height / 5);
+        Shelf shelf = new Shelf(id, col, row, width, height, planks, gridView.getNextShelfValue());
+        shelves.add(shelf);
+        gridView.setShelves(shelves);
+        markShelvesOnGrid();
+        gridView.draw();
+        mainView.getStatusLabel().setText("Shelf " + id + " placed.");
+    }
+
+    @Override
+    public void onShelfRemoved(int row, int col) {
+        shelves.removeIf(shelf ->
+            col >= shelf.getX() && col < shelf.getX() + shelf.getWidth() &&
+            row >= shelf.getY() && row < shelf.getY() + shelf.getHeight()
+        );
+        // Remet les cases en mur
+        for (int r = 0; r < gridView.getRows(); r++)
+            for (int c = 0; c < gridView.getColumns(); c++) {
+                gridView.setCellType(r, c, GridView.TYPE_WALL);
+                gridView.setCellValue(r, c, null);
+            }
+        // Remarque les étagères restantes
+        gridView.setShelves(shelves);
+        markShelvesOnGrid();
+        gridView.draw();
+        mainView.getStatusLabel().setText("Shelf removed.");
+    }
+});
+        
         mainView.getPreviousStepButton().setOnAction(event -> previousStep());
 
         mainView.getTimeSlider().valueProperty().addListener((obs, oldValue, newValue) -> {
@@ -111,21 +145,6 @@ public class GridController {
         mainView.getApplyLocationButton().setOnAction(event -> updateLocationFromInput()); 
     }
 
-    /** Crée quelques étagères par défaut dans la salle. */
-    private void createDefaultShelves() {
-        int gridHeight  = gridView.getRows();
-        int shelfHeight = 30;  // hauteur en cases
-        int shelfWidth  = 20;   // largeur en cases
-        int startY      = gridHeight - shelfHeight + 4;
-
-        Shelf shelf1 = new Shelf("S1", 3,  startY, shelfWidth, shelfHeight, 5);
-        populateShelf(shelf1, "S1");
-        shelves.add(shelf1);
-
-        Shelf shelf2 = new Shelf("S2", 30, startY, shelfWidth, shelfHeight, 5);
-        populateShelf(shelf2, "S2");
-        shelves.add(shelf2);
-    }
     private void markShelvesOnGrid() {
         for (Shelf shelf : shelves) {
             int startX = shelf.getX();
@@ -155,21 +174,11 @@ public class GridController {
                 for (int row = prevPlankRow + 1; row < plankRow; row++) {
                     for (int col = startX; col < startX + w; col++) {
                         gridView.setCellType(row, col, GridView.TYPE_DOCUMENT);
+                        gridView.setCellValue(row, col, shelf.getValue());
                         moldsim.model.Cell cell = modelGrid.getCell(col, row);
                         if (cell != null) cell.setWallMaterial(moldsim.model.WallMaterial.DOCUMENT);
                     }
                 }
-            }
-        }
-    }
-
-    /** Remplit une étagère avec des documents. */
-    private void populateShelf(Shelf shelf, String prefix) {
-        DocumentValue[] values = DocumentValue.values();
-        for (int p = 0; p < shelf.getPlankCount(); p++) {
-            for (int d = 0; d < 5; d++) {
-                DocumentValue val = values[(p + d) % values.length];
-                shelf.addDocument(p, new Document(prefix + "-P" + p + "-D" + d, val));
             }
         }
     }
@@ -321,6 +330,12 @@ public class GridController {
         history.set(currentStepIndex, updatedSnapshot);
     }
 
+    private void exportPdf() {
+        // TODO: implement after merge with CLI branch
+        mainView.getStatusLabel().setText("PDF export coming soon.");
+        }
+    
+
     private void advanceOneNewStep() {
         gridView.syncModelFromView();
         gridView.stepSimulation();
@@ -350,5 +365,63 @@ public class GridController {
 
         updatingTimeSlider = false;
     }
+    private void openNewShelfDialog() {
+        javafx.scene.control.Dialog<int[]> dialog = new javafx.scene.control.Dialog<>();
+        dialog.setTitle("New Shelf");
+        dialog.setHeaderText("Enter shelf dimensions (in cells)");
 
+        javafx.scene.control.ButtonType okButton =
+            new javafx.scene.control.ButtonType("Place", javafx.scene.control.ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(okButton, javafx.scene.control.ButtonType.CANCEL);
+
+        javafx.scene.layout.GridPane grid = new javafx.scene.layout.GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+
+        javafx.scene.control.TextField widthField  = new javafx.scene.control.TextField("4");
+        javafx.scene.control.TextField heightField = new javafx.scene.control.TextField("20");
+        javafx.scene.control.ComboBox<String> valueBox = new javafx.scene.control.ComboBox<>();
+        valueBox.getItems().addAll("LOW", "MEDIUM", "HIGH", "CRITICAL");
+        valueBox.setValue("MEDIUM");
+
+        grid.add(new javafx.scene.control.Label("Width:"),  0, 0);
+        grid.add(widthField,  1, 0);
+        grid.add(new javafx.scene.control.Label("Height:"), 0, 1);
+        grid.add(heightField, 1, 1);
+        grid.add(new javafx.scene.control.Label("Value:"),  0, 2);
+        grid.add(valueBox,    1, 2);
+
+        dialog.getDialogPane().setContent(grid);
+
+        dialog.setResultConverter(btn -> {
+            if (btn == okButton) {
+                try {
+                    int w = Integer.parseInt(widthField.getText().trim());
+                    int h = Integer.parseInt(heightField.getText().trim());
+                    // stocke la valeur choisie
+                    return new int[]{w, h};
+                } catch (NumberFormatException e) {
+                    return null;
+                }
+            }
+            return null;
+        });
+
+        dialog.showAndWait().ifPresent(dims -> {
+            if (dims != null) {
+                // Récupère la valeur patrimoniale choisie
+                DocumentValue chosenValue = switch (valueBox.getValue()) {
+                    case "LOW"      -> DocumentValue.LOW;
+                    case "HIGH"     -> DocumentValue.HIGH;
+                    case "CRITICAL" -> DocumentValue.CRITICAL;
+                    default         -> DocumentValue.MEDIUM;
+                };
+                gridView.enablePlacementMode(dims[0], dims[1]);
+                // Stocke la valeur pour l'utiliser au placement
+                gridView.setNextShelfValue(chosenValue);
+                mainView.getStatusLabel().setText(
+                    "Click on the grid to place the shelf (" + dims[0] + "x" + dims[1] + ")");
+            }
+        });
+    }
 }
