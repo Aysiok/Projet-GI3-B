@@ -1,6 +1,7 @@
 package moldsim;
+import moldsim.controller.*;
 import moldsim.model.*;
-import moldsim.simulation.*;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -28,7 +29,7 @@ public class Main {
             grid.getCell(5, 5).infect(MoldSpecies.CLADOSPORIUM);
         }
         
-        Simulation sim = new Simulation(grid, env);
+        SimulationController sim = new SimulationController(grid, env);
         System.out.println("Etat initial :");
         printGrid(grid);
         List<Statistics> statsList = new ArrayList<>();
