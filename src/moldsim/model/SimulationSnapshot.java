@@ -9,10 +9,27 @@ public class SimulationSnapshot {
     private final int week;
     private final int[][] cellStates;
 
-    public SimulationSnapshot(int step, int week, int[][] cellStates) {
+    private final double humidity;
+    private final double temperature;
+    private final double ventilation;
+    private final WallMaterial material;
+
+    public SimulationSnapshot(
+            int step,
+            int week,
+            int[][] cellStates,
+            double humidity,
+            double temperature,
+            double ventilation,
+            WallMaterial material
+    ) {
         this.step = step;
         this.week = week;
         this.cellStates = cellStates;
+        this.humidity = humidity;
+        this.temperature = temperature;
+        this.ventilation = ventilation;
+        this.material = material;
     }
 
     public int getStep() {
@@ -25,5 +42,21 @@ public class SimulationSnapshot {
 
     public int[][] getCellStates() {
         return cellStates;
+    }
+
+    public double getHumidity() {
+        return humidity;
+    }
+
+    public double getTemperature() {
+        return temperature;
+    }
+
+    public double getVentilation() {
+        return ventilation;
+    }
+
+    public WallMaterial getMaterial() {
+        return material;
     }
 }
