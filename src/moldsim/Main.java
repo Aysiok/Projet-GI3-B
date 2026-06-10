@@ -7,61 +7,32 @@ import java.util.List;
 
 import java.util.Scanner;
 
-public class Main {
-    public static void main(String[] args) {
-        System.out.println("=== Test Simulation Console ===");
-        Environment env = new Environment();
-        env.setHumidity(85.0);
-        
-        Grid grid = new Grid(10, 10, false, NeighborhoodMode.FOUR);
-        
-        Scanner scanner = new Scanner(System.in);
-        System.out.print("Entrez la coordonnée X du foyer (0-9) : ");
-        int x = scanner.nextInt();
-        System.out.print("Entrez la coordonnée Y du foyer (0-9) : ");
-        int y = scanner.nextInt();
+import javafx.application.Application;
+import javafx.scene.Scene;
+import javafx.stage.Stage;
+import moldsim.controller.GridController;
+import moldsim.view.MainView;
 
-        if (grid.inBounds(x, y)) {
-            grid.getCell(x, y).infect(MoldSpecies.CLADOSPORIUM);
-            System.out.println("Foyer placé en (" + x + "," + y + ")");
-        } else {
-            System.out.println("Coordonnées invalides, foyer placé au centre par défaut.");
-            grid.getCell(5, 5).infect(MoldSpecies.CLADOSPORIUM);
-        }
-        
-        SimulationController sim = new SimulationController(grid, env);
-        System.out.println("Etat initial :");
-        printGrid(grid);
-        List<Statistics> statsList = new ArrayList<>();
-        int previousInfected = 0;
-        
-        for (int i = 0; i < 10; i++) {
-            sim.step();
-            System.out.println("Tour " + (i + 1) + " :");
-            printGrid(grid);
-            Statistics stats = new Statistics(grid, previousInfected);
-            System.out.println(stats);
-            statsList.add(stats);
-            previousInfected = stats.getInfectedCells();
-        }
-        Scanner scanner2 = new Scanner(System.in);
-        System.out.print("Voulez-vous exporter un rapport PDF ? (o/n) : ");
-        String answer = scanner2.nextLine().trim().toLowerCase();
-        if (answer.equals("o")) {
-            PdfExporter.export(statsList, env, "report.pdf");
-        } else {
-            System.out.println("Rapport ignoré.");
-        }
-        scanner.close();
+/**
+ * Entry point of the JavaFX application.
+ */
+public class Main extends Application {
+
+    @Override
+    public void start(Stage primaryStage) {
+        MainView mainView = new MainView();
+
+        GridController gridController = new GridController(mainView);
+        gridController.initialize();
+
+        Scene scene = new Scene(mainView, 1000, 700);
+
+        primaryStage.setTitle("ArchiveShield — Mold Risk Simulator");
+        primaryStage.setScene(scene);
+        primaryStage.show();
     }
-    private static void printGrid(Grid g) {
-        for (int y = 0; y < g.getHeight(); y++) {
-            for (int x = 0; x < g.getWidth(); x++) {
-                Cell c = g.getCell(x, y);
-                System.out.print(c.isInfected() ? " X " : " . ");
-            }
-            System.out.println();
-        }
-        System.out.println();
+
+    public static void main(String[] args) {
+        launch(args);
     }
 }

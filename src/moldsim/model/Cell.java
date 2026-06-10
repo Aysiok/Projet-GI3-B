@@ -17,7 +17,7 @@ public class Cell implements Serializable {
     private int age;              // nombre de pas survécus
     private CellState state;
     private MoldSpecies species;  // null si HEALTHY ou DEAD
-    private WallMaterial wallMaterial;
+    private WallMaterial wallMaterial = WallMaterial.PLASTER;
 
     /** Crée cellule saine aux coordonnées qu'on donne */
     public Cell(int x, int y) {
@@ -27,7 +27,6 @@ public class Cell implements Serializable {
         this.age = 0;
         this.state = CellState.HEALTHY;
         this.species = null;
-        this.wallMaterial = WallMaterial.PLASTER;
     }
 
     public boolean isInfected() {
