@@ -15,9 +15,9 @@ public class Shelf implements Serializable {
     private final int width;
     private final int height;
     private final int plankCount;
-    private DocumentValue value;
+    private ShelfValue value;
 
-    public Shelf(String id, int x, int y, int width, int height, int plankCount, DocumentValue value) {
+    public Shelf(String id, int x, int y, int width, int height, int plankCount, ShelfValue value) {
         this.id         = id;
         this.x          = x;
         this.y          = y;
@@ -33,8 +33,8 @@ public class Shelf implements Serializable {
     public int getWidth()           { return width; }
     public int getHeight()          { return height; }
     public int getPlankCount()      { return plankCount; }
-    public DocumentValue getValue() { return value; }
-    public void setValue(DocumentValue value) { this.value = value; }
+    public ShelfValue getValue() { return value; }
+    public void setValue(ShelfValue value) { this.value = value; }
 
     @Override
     public String toString() {

@@ -37,8 +37,8 @@ public class GridView extends Canvas {
     private int ghostWidth  = 4;
     private int ghostHeight = 20;
     private ShelfPlacementListener shelfPlacementListener;
-    private moldsim.model.DocumentValue nextShelfValue = moldsim.model.DocumentValue.MEDIUM;
-    private final moldsim.model.DocumentValue[][] cellValue;
+    private moldsim.model.ShelfValue nextShelfValue = moldsim.model.ShelfValue.MEDIUM;
+    private final moldsim.model.ShelfValue[][] cellValue;
     public static final int TYPE_WALL     = 0;
     public static final int TYPE_SHELF    = 1;
     public static final int TYPE_DOCUMENT = 2;
@@ -49,7 +49,7 @@ public class GridView extends Canvas {
         this.cellSize  = cellSize;
         this.cells     = new int[rows][columns];
         this.cellType = new int[rows][columns]; // tout à 0 (wall) par défaut
-        this.cellValue = new moldsim.model.DocumentValue[rows][columns];
+        this.cellValue = new moldsim.model.ShelfValue[rows][columns];
         this.random    = new Random();
 
         setWidth(columns * cellSize);
@@ -94,11 +94,11 @@ public class GridView extends Canvas {
         this.ghostWidth    = width;
         this.ghostHeight   = height;
     }
-    public void setNextShelfValue(moldsim.model.DocumentValue value) {
+    public void setNextShelfValue(moldsim.model.ShelfValue value) {
     this.nextShelfValue = value;
 }
 
-    public moldsim.model.DocumentValue getNextShelfValue() {
+    public moldsim.model.ShelfValue getNextShelfValue() {
         return nextShelfValue;
     }
 
@@ -108,7 +108,7 @@ public class GridView extends Canvas {
         this.ghostCol = -1;
     }
 
-    public void setCellValue(int row, int col, moldsim.model.DocumentValue value) {
+    public void setCellValue(int row, int col, moldsim.model.ShelfValue value) {
         if (isInside(row, col)) cellValue[row][col] = value;
     }
 
@@ -227,7 +227,7 @@ public class GridView extends Canvas {
         } else {
     // Sain — couleur selon le type
             if (type == TYPE_DOCUMENT) {
-                moldsim.model.DocumentValue val = cellValue[row][column];
+                moldsim.model.ShelfValue val = cellValue[row][column];
                 if (val == null) {
                     gc.setFill(Color.rgb(255, 248, 220));
                 } else {

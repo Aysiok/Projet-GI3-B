@@ -4,7 +4,7 @@ package moldsim.model;
  * Represents the patrimonial value of a document in the archive.
  * Used to prioritize which documents to save first.
  */
-public enum DocumentValue {
+public enum ShelfValue {
     LOW,
     MEDIUM,
     HIGH,

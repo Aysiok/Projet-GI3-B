@@ -1,6 +1,6 @@
 package moldsim.controller;
 
-import moldsim.model.DocumentValue;
+import moldsim.model.ShelfValue;
 import moldsim.model.Shelf;
 import moldsim.view.GridView;
 import moldsim.view.MainView;
@@ -410,11 +410,11 @@ public class GridController {
         dialog.showAndWait().ifPresent(dims -> {
             if (dims != null) {
                 // Récupère la valeur patrimoniale choisie
-                DocumentValue chosenValue = switch (valueBox.getValue()) {
-                    case "LOW"      -> DocumentValue.LOW;
-                    case "HIGH"     -> DocumentValue.HIGH;
-                    case "CRITICAL" -> DocumentValue.CRITICAL;
-                    default         -> DocumentValue.MEDIUM;
+                ShelfValue chosenValue = switch (valueBox.getValue()) {
+                    case "LOW"      -> ShelfValue.LOW;
+                    case "HIGH"     -> ShelfValue.HIGH;
+                    case "CRITICAL" -> ShelfValue.CRITICAL;
+                    default         -> ShelfValue.MEDIUM;
                 };
                 gridView.enablePlacementMode(dims[0], dims[1]);
                 // Stocke la valeur pour l'utiliser au placement
