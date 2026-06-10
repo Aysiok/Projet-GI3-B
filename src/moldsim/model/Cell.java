@@ -19,7 +19,7 @@ public class Cell implements Serializable {
     private MoldSpecies species;  // null si HEALTHY ou DEAD
     private WallMaterial wallMaterial = WallMaterial.PLASTER;
 
-    /** Crée  cellule saine aux coordonnées qu'on donne*/
+    /** Crée cellule saine aux coordonnées qu'on donne */
     public Cell(int x, int y) {
         this.x = x;
         this.y = y;
@@ -28,7 +28,6 @@ public class Cell implements Serializable {
         this.state = CellState.HEALTHY;
         this.species = null;
     }
-
 
     public boolean isInfected() {
         return state == CellState.INFECTED;
@@ -69,7 +68,6 @@ public class Cell implements Serializable {
         this.age++;
     }
 
-
     public int getX() { return x; }
     public int getY() { return y; }
 
@@ -93,7 +91,9 @@ public class Cell implements Serializable {
     public void setSpecies(MoldSpecies species) { this.species = species; }
 
     public WallMaterial getWallMaterial() { return wallMaterial; }
-    public void setWallMaterial(WallMaterial wallMaterial) { this.wallMaterial = wallMaterial; }
+    public void setWallMaterial(WallMaterial wallMaterial) {
+        this.wallMaterial = wallMaterial;
+    }
 
     /** Borne une valeur dans [0, 100]. */
     private static double clamp(double value) {
@@ -105,6 +105,7 @@ public class Cell implements Serializable {
         return "Cell(" + x + "," + y + ", " + state
                 + (species != null ? " [" + species.name() + "]" : "")
                 + ", mold=" + String.format("%.1f", moldLevel)
-                + ", age=" + age + ", material=" + wallMaterial + ")";
+                + ", age=" + age
+                + ", material=" + wallMaterial + ")";
     }
 }
