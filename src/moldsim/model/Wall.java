@@ -38,22 +38,23 @@ public class Wall implements Serializable {
 
 
     public Cell getCell(int x, int y) {
-        return grid[y][x];
+        if (inBounds(x, y)){
+            return grid[y][x];
+        }
+        else return null;
     }
 
     /** voisins d'une cellule */
     public List<Cell> getNeighbors(int x, int y) {
         List<Cell> neighbors = new ArrayList<>(8);
-        int[][] offsets = new int[][] {
-                        {-1,-1}, {0,-1}, {1,-1},
-                        {-1, 0},         {1, 0},
-                        {-1, 1}, {0, 1}, {1, 1}
-                };
-        for (int[] offset : offsets) {
-            Cell neighbor = getCell(x + offset[0], y + offset[1]);
-            if (neighbor != null) {
-                neighbors.add(neighbor);
-            }
+        int[][] offsets = {
+            {-1,-1}, {0,-1}, {1,-1},
+            {-1, 0},         {1, 0},
+            {-1, 1}, {0, 1}, {1, 1}
+        };
+        for (int[] o : offsets) {
+            int nx = x + o[0], ny = y + o[1];
+            if (inBounds(nx, ny)) neighbors.add(grid[ny][nx]);
         }
         return neighbors;
     }
@@ -65,8 +66,8 @@ public class Wall implements Serializable {
 
     /** une cellule s'infecte */
     public void randomlyInfect(int count, MoldSpecies species, Random random) {
-        if (species == null || random == null) {
-            throw new IllegalArgumentException("Species and random cannot be null");
+        if (random == null) {
+            throw new IllegalArgumentException("random cannot be null");
         }
         int total = width * height;
         int toInfect = Math.min(count, total);
@@ -84,7 +85,7 @@ public class Wall implements Serializable {
     }
 
     /** retour à que des cellules saines */
-    public void reset(double humidity, double temperature) {
+    public void reset() {
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
                 Cell c = grid[y][x];
@@ -99,8 +100,13 @@ public class Wall implements Serializable {
         return x >= 0 && x < width && y >= 0 && y < height;
     }
 
-    public int getWidth() { return width; }
-    public int getHeight() { return height; }
+    public int getWidth() {
+        return width;
+    }
+
+    public int getHeight() {
+        return height;
+    }
 
     /** tableau en 2d */
     public Cell[][] getCells() {

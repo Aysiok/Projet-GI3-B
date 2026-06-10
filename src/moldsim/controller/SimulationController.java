@@ -18,18 +18,19 @@ public class SimulationController {
     this.alertController = new AlertController();
     this.currentWeek     = 0;
     initSensors(shelvesByWall);
+    alertController.setRecommendationEngine(new RecommendationEngine(room));
 }
 
-private void initSensors(Map<Wall, List<Shelf>> shelvesByWall) {
-    if (room.getNorthWall() != null) sensors.add(new MoldSensor(room.getNorthWall(),
-            shelvesByWall.getOrDefault(room.getNorthWall(), List.of())));
-    if (room.getSouthWall() != null) sensors.add(new MoldSensor(room.getSouthWall(),
-            shelvesByWall.getOrDefault(room.getSouthWall(), List.of())));
-    if (room.getEastWall()  != null) sensors.add(new MoldSensor(room.getEastWall(),
-            shelvesByWall.getOrDefault(room.getEastWall(),  List.of())));
-    if (room.getWestWall()  != null) sensors.add(new MoldSensor(room.getWestWall(),
-            shelvesByWall.getOrDefault(room.getWestWall(),  List.of())));
-}
+    private void initSensors(Map<Wall, List<Shelf>> shelvesByWall) {
+        if (room.getNorthWall() != null) sensors.add(new MoldSensor(room.getNorthWall(),
+                shelvesByWall.getOrDefault(room.getNorthWall(), List.of())));
+        if (room.getSouthWall() != null) sensors.add(new MoldSensor(room.getSouthWall(),
+                shelvesByWall.getOrDefault(room.getSouthWall(), List.of())));
+        if (room.getEastWall()  != null) sensors.add(new MoldSensor(room.getEastWall(),
+                shelvesByWall.getOrDefault(room.getEastWall(),  List.of())));
+        if (room.getWestWall()  != null) sensors.add(new MoldSensor(room.getWestWall(),
+                shelvesByWall.getOrDefault(room.getWestWall(),  List.of())));
+    }
 
     public void tick() {
         currentWeek++;

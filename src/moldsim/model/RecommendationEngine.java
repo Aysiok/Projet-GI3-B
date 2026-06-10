@@ -5,83 +5,64 @@ import java.util.List;
 
 public class RecommendationEngine {
 
-    private final Wall wall;
-    private final List<Shelf> shelves;
+    private final ArchiveRoom room;
 
-    public RecommendationEngine(Wall wall, List<Shelf> shelves) {
-        this.wall    = wall;
-        this.shelves = shelves;
+    public RecommendationEngine(ArchiveRoom room) {
+        this.room = room;
     }
 
-    public List<String> analyze() {
+    public List<String> analyze(SensorEvent event) {
+        return switch (event.getType()) {
+            case GLOBAL -> analyzeGlobal(event);
+            case SHELF  -> analyzeShelf(event);
+        };
+    }
+
+    private List<String> analyzeGlobal(SensorEvent event) {
         List<String> recommendations = new ArrayList<>();
-
-        for (Cell[] row : wall.getCells()) {
-            for (Cell cell : row) {
-                if (!cell.isInfected()) continue;
-
-                Shelf shelf = getShelfAt(cell.getX(), cell.getY());
-
-                // cellule infectée directement sur une étagère
-                if (shelf != null) {
-                    if (shelf.getValue() == ShelfValue.CRITICAL
-                     || shelf.getValue() == ShelfValue.HIGH) {
-                        recommendations.add("URGENT : étagère " + shelf.getId()
-                            + " infectée [valeur : " + shelf.getValue()
-                            + "] — évacuation immédiate");
-                    } else {
-                        recommendations.add("ATTENTION : étagère " + shelf.getId()
-                            + " infectée [valeur : " + shelf.getValue()
-                            + "] — traitement recommandé");
-                    }
-                }
-
-                // cellule infectée voisine d'une étagère saine
-                for (Cell neighbor : wall.getNeighbors(cell)) {
-                    if (neighbor.isInfected()) continue;
-                    Shelf neighborShelf = getShelfAt(neighbor.getX(), neighbor.getY());
-                    if (neighborShelf != null
-                     && (neighborShelf.getValue() == ShelfValue.CRITICAL
-                      || neighborShelf.getValue() == ShelfValue.HIGH)) {
-                        recommendations.add("PRÉVENTIF : étagère " + neighborShelf.getId()
-                            + " menacée [valeur : " + neighborShelf.getValue()
-                            + "] — zone voisine infectée");
-                    }
-                }
+        String wallName = getWallName(event.getWall());
+        switch (event.getAlertLevel()) {
+            case CRITICAL -> {
+                recommendations.add("CRITIQUE : mur " + wallName + " à "
+                    + format(event.getMoldRate())
+                    + " infecté — déshumidifier immédiatement");
+                recommendations.add("Augmenter la ventilation de la pièce");
             }
+            case HIGH -> recommendations.add("ÉLEVÉ : mur " + wallName + " à "
+                    + format(event.getMoldRate())
+                    + " infecté — traiter les zones touchées");
+            case MEDIUM -> recommendations.add("ATTENTION : mur " + wallName
+                    + " — premiers signes de contamination, surveiller");
+            case LOW -> {}
         }
-
-        // recommandation globale selon le taux
-        double rate = getMoldRate();
-        if (rate >= 0.30) {
-            recommendations.add("CRITIQUE : " + String.format("%.0f%%", rate * 100)
-                + " du mur infecté — augmenter ventilation et déshumidifier");
-        } else if (rate >= 0.15) {
-            recommendations.add("ÉLEVÉ : " + String.format("%.0f%%", rate * 100)
-                + " du mur infecté — surveiller et traiter les zones touchées");
-        }
-
         return recommendations;
     }
 
-    private Shelf getShelfAt(int x, int y) {
-        for (Shelf shelf : shelves) {
-            if (x >= shelf.getX() && x < shelf.getX() + shelf.getWidth()
-             && y >= shelf.getY() && y < shelf.getY() + shelf.getHeight()) {
-                return shelf;
-            }
+    private List<String> analyzeShelf(SensorEvent event) {
+        List<String> recommendations = new ArrayList<>();
+        Shelf shelf = event.getShelf();
+        String wallName = getWallName(event.getWall());
+        switch (event.getAlertLevel()) {
+            case CRITICAL -> recommendations.add("URGENT : étagère " + shelf.getId()
+                    + " [" + shelf.getValue() + "] infectée sur mur " + wallName
+                    + " — évacuation immédiate");
+            case HIGH -> recommendations.add("PRÉVENTIF : étagère " + shelf.getId()
+                    + " [" + shelf.getValue() + "] menacée sur mur " + wallName
+                    + " — zone voisine infectée");
+            default -> {}
         }
-        return null;
+        return recommendations;
     }
 
-    private double getMoldRate() {
-        int total = 0, infected = 0;
-        for (Cell[] row : wall.getCells()) {
-            for (Cell cell : row) {
-                total++;
-                if (cell.isInfected()) infected++;
-            }
-        }
-        return total == 0 ? 0.0 : (double) infected / total;
+    private String getWallName(Wall wall) {
+        if (wall == room.getNorthWall()) return "Nord";
+        if (wall == room.getSouthWall()) return "Sud";
+        if (wall == room.getEastWall())  return "Est";
+        if (wall == room.getWestWall())  return "Ouest";
+        return "inconnu";
+    }
+
+    private String format(double rate) {
+        return String.format("%.0f%%", rate * 100);
     }
 }

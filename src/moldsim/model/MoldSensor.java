@@ -1,7 +1,9 @@
 package moldsim.model;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class MoldSensor {
 
@@ -12,12 +14,14 @@ public class MoldSensor {
     private final Wall wall;
     private final List<Shelf> shelves;
     private AlertLevel lastAlertLevel;
+    private final Map<String, AlertLevel> shelfAlertLevels;
 
     public MoldSensor(Wall wall, List<Shelf> shelves) {
         if (wall == null) throw new IllegalArgumentException("Wall cannot be null");
-        this.wall           = wall;
-        this.shelves        = shelves != null ? shelves : List.of();
+        this.wall = wall;
+        this.shelves = shelves != null ? shelves : List.of();
         this.lastAlertLevel = AlertLevel.LOW;
+        this.shelfAlertLevels  = new HashMap<>();
     }
 
     public MoldSensor(Wall wall) {
@@ -37,8 +41,7 @@ public class MoldSensor {
     }
 
     /** Niveau d'alerte correspondant au taux actuel */
-    public AlertLevel getAlertLevel() {
-        double rate = measure();
+    public AlertLevel toAlertLevel(double rate) {
         if (rate >= THRESHOLD_CRITICAL) return AlertLevel.CRITICAL;
         if (rate >= THRESHOLD_HIGH)     return AlertLevel.HIGH;
         if (rate >= THRESHOLD_MEDIUM)   return AlertLevel.MEDIUM;
@@ -47,49 +50,50 @@ public class MoldSensor {
 
     /**
      * Génère les SensorEvents du tick courant :
-     * - un event global si le niveau a augmenté
-     * - un event étagère si une shelf sensible est touchée ou menacée
+     * - un event GLOBAL si le niveau a augmenté
+     * - un event SHELF si une shelf sensible est touchée ou menacée
      */
     public List<SensorEvent> poll(int currentWeek) {
         List<SensorEvent> events = new ArrayList<>();
-
-        AlertLevel level = getAlertLevel();
+        double rate = measure();
+        AlertLevel level = toAlertLevel(rate);
         if (level.ordinal() > lastAlertLevel.ordinal()) {
             lastAlertLevel = level;
-            events.add(new SensorEvent(currentWeek, level, measure(), wall));
+            events.add(new SensorEvent(currentWeek, level, rate, wall, EventType.GLOBAL, null));
         }
-
-        SensorEvent shelfEvent = checkShelves(currentWeek);
-        if (shelfEvent != null) events.add(shelfEvent);
-
+        events.addAll(checkShelves(currentWeek, rate));
         return events;
     }
 
     /** Vérifie si une shelf sensible est infectée ou menacée */
-    private SensorEvent checkShelves(int currentWeek) {
+    private List<SensorEvent> checkShelves(int currentWeek, double rate) {
+        List<SensorEvent> events = new ArrayList<>();
         for (Cell[] row : wall.getCells()) {
             for (Cell cell : row) {
                 if (!cell.isInfected()) continue;
-
-                // cellule infectée directement sur une shelf sensible
                 Shelf shelf = getShelfAt(cell.getX(), cell.getY());
                 if (shelf != null && isSensitive(shelf)) {
-                    return new SensorEvent(currentWeek, AlertLevel.CRITICAL,
-                                           measure(), wall);
+                    emitIfEscalated(shelf, AlertLevel.CRITICAL, currentWeek, events, rate);
                 }
 
-                // cellule infectée voisine d'une shelf sensible saine
                 for (Cell neighbor : wall.getNeighbors(cell)) {
                     if (neighbor.isInfected()) continue;
                     Shelf neighborShelf = getShelfAt(neighbor.getX(), neighbor.getY());
                     if (neighborShelf != null && isSensitive(neighborShelf)) {
-                        return new SensorEvent(currentWeek, AlertLevel.HIGH,
-                                               measure(), wall);
+                        emitIfEscalated(neighborShelf, AlertLevel.HIGH, currentWeek, events, rate);
                     }
                 }
             }
         }
-        return null;
+        return events;
+    }
+
+    private void emitIfEscalated(Shelf shelf, AlertLevel level, int currentWeek, List<SensorEvent> events, double rate) {
+        AlertLevel last = shelfAlertLevels.getOrDefault(shelf.getId(), AlertLevel.LOW);
+        if (level.ordinal() > last.ordinal()) {
+            shelfAlertLevels.put(shelf.getId(), level);
+            events.add(new SensorEvent(currentWeek, level, rate, wall, EventType.SHELF, shelf));
+        }
     }
 
     private boolean isSensitive(Shelf shelf) {
@@ -99,19 +103,19 @@ public class MoldSensor {
 
     private Shelf getShelfAt(int x, int y) {
         for (Shelf shelf : shelves) {
-            if (x >= shelf.getX() && x < shelf.getX() + shelf.getWidth()
-             && y >= shelf.getY() && y < shelf.getY() + shelf.getHeight()) {
+            if (x >= shelf.getX() && x < shelf.getX() + shelf.getWidth() && y >= shelf.getY() && y < shelf.getY() + shelf.getHeight()) {
                 return shelf;
             }
         }
         return null;
     }
 
-    public Wall getWall(){
+    public Wall getWall() {
         return wall;
     }
 
     public AlertLevel getLastAlertLevel() {
         return lastAlertLevel;
     }
+
 }
