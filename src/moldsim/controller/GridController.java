@@ -578,7 +578,10 @@ public class GridController {
         wallManager.moveToPreviousWall();
 
         loadCurrentWallIntoView();
-        resetHistoryForCurrentWall();
+
+        updateStatistics();
+        updateTimeDisplay();
+        updateTimeSlider();
 
         mainView.getStatusLabel().setText(
             "Moved to " + wallManager.getCurrentWallContext().getName() + "."
@@ -591,7 +594,10 @@ public class GridController {
         wallManager.moveToNextWall();
 
         loadCurrentWallIntoView();
-        resetHistoryForCurrentWall();
+
+        updateStatistics();
+        updateTimeDisplay();
+        updateTimeSlider();
 
         mainView.getStatusLabel().setText(
             "Moved to " + wallManager.getCurrentWallContext().getName() + "."
@@ -604,13 +610,7 @@ public class GridController {
         gridView.syncModelFromView();
     }
 
-    private void resetHistoryForCurrentWall() {
-        history.clear();
-        currentStepIndex = 0;
-        saveCurrentSnapshot();
-        updateTimeDisplay();
-        updateTimeSlider();
-    }
+    
 
     private void propagateBetweenAdjacentWalls() {
         List<WallContext> walls = wallManager.getWalls();
