@@ -31,7 +31,7 @@ public class MoldSensor {
     /** Taux de cellules infectées sur le mur (entre 0.0 et 1.0) */
     public double measure() {
         int total = 0, infected = 0;
-        for (Cell[] row : wall.getCells()) {
+        for (Cell[] row : wall.getGrid()) {
             for (Cell cell : row) {
                 total++;
                 if (cell.isInfected()) infected++;
@@ -68,7 +68,7 @@ public class MoldSensor {
     /** Vérifie si une shelf sensible est infectée ou menacée */
     private List<SensorEvent> checkShelves(int currentWeek, double rate) {
         List<SensorEvent> events = new ArrayList<>();
-        for (Cell[] row : wall.getCells()) {
+        for (Cell[] row : wall.getGrid()) {
             for (Cell cell : row) {
                 if (!cell.isInfected()) continue;
                 Shelf shelf = getShelfAt(cell.getX(), cell.getY());
