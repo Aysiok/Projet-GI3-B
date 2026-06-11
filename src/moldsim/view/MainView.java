@@ -6,6 +6,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.control.*;
 import javafx.scene.text.Text;
+import javafx.geometry.Pos;
 
 /**
  * Main view of the application.
@@ -181,6 +182,7 @@ public class MainView extends BorderPane {
     private javafx.scene.layout.HBox buildGridArea() {
         javafx.scene.layout.HBox container = new javafx.scene.layout.HBox(10);
         container.setPadding(new Insets(10));
+        container.setAlignment(Pos.TOP_CENTER);
         container.setStyle("-fx-background-color: #1A1A1A;");
 
         int rows = 50;
@@ -204,14 +206,25 @@ public class MainView extends BorderPane {
         currentWallNameLabel = new Label("Current wall");
         currentWallNameLabel.setStyle("-fx-text-fill: white; -fx-font-size: 12; -fx-font-weight: bold;");
 
+        javafx.scene.layout.HBox leftNav = new javafx.scene.layout.HBox(4);
+        leftNav.setAlignment(Pos.CENTER);
+        leftNav.getChildren().addAll(previousWallButton, leftWallNameLabel);
+
+        javafx.scene.layout.HBox rightNav = new javafx.scene.layout.HBox(4);
+        rightNav.setAlignment(Pos.CENTER);
+        rightNav.getChildren().addAll(rightWallNameLabel, nextWallButton);
+
         javafx.scene.layout.VBox leftBox = new javafx.scene.layout.VBox(5);
-        leftBox.getChildren().addAll(previousWallButton, leftWallPreview, leftWallNameLabel);
+        leftBox.setAlignment(Pos.TOP_CENTER);
+        leftBox.getChildren().addAll(leftWallPreview, leftNav);
 
         javafx.scene.layout.VBox centerBox = new javafx.scene.layout.VBox(5);
+        centerBox.setAlignment(Pos.TOP_CENTER);
         centerBox.getChildren().addAll(gridView, currentWallNameLabel);
 
         javafx.scene.layout.VBox rightBox = new javafx.scene.layout.VBox(5);
-        rightBox.getChildren().addAll(nextWallButton, rightWallPreview, rightWallNameLabel);
+        rightBox.setAlignment(Pos.TOP_CENTER);
+        rightBox.getChildren().addAll(rightWallPreview, rightNav);
 
         container.getChildren().addAll(leftBox, centerBox, rightBox);
 

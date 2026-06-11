@@ -1,10 +1,10 @@
 package moldsim.controller;
 
-import moldsim.model.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import moldsim.model.*;
 
 public class SimulationController {
 
@@ -88,7 +88,7 @@ public class SimulationController {
         });
     }
 
-    private double computeInfectionProbability(Cell neighbor, MoldSpecies species, WallMaterial wallMaterial) {
+    public double computeInfectionProbability(Cell neighbor, MoldSpecies species, WallMaterial wallMaterial) {
         double humidity = environment.getHumidity();
         double temperature = environment.getTemperature();
         double ventilation = environment.getVentilation();

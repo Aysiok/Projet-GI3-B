@@ -618,8 +618,13 @@ public class GridController {
         for (int i = 0; i < walls.size(); i++) {
             WallContext current = walls.get(i);
             WallContext next = walls.get((i + 1) % walls.size());
+            WallContext previous = walls.get((i - 1 + walls.size()) % walls.size());
 
+            // Bord droit du mur courant vers bord gauche du mur suivant
             propagateRightEdgeToLeftEdge(current, next);
+
+            // Bord gauche du mur courant vers bord droit du mur précédent
+            propagateLeftEdgeToRightEdge(current, previous);
         }
     }
 
@@ -643,7 +648,48 @@ public class GridController {
                     && targetCell.getState() == CellState.HEALTHY
                     && sourceCell.getSpecies() != null) {
 
-                double probability = 0.08;
+                double probability = targetContext
+                        .getSimulationController()
+                        .computeInfectionProbability(
+                            targetCell,
+                            sourceCell.getSpecies(),
+                            targetWall.getMaterial()
+                        );
+
+                if (Math.random() < probability) {
+                    targetCell.infect(sourceCell.getSpecies());
+                }
+            }
+        }
+    }
+
+    private void propagateLeftEdgeToRightEdge(WallContext sourceContext, WallContext targetContext) {
+        Wall sourceWall = sourceContext.getWall();
+        Wall targetWall = targetContext.getWall();
+
+        int sourceLeftCol = 0;
+        int targetRightCol = targetWall.getWidth() - 1;
+
+        int commonHeight = Math.min(sourceWall.getHeight(), targetWall.getHeight());
+
+        for (int row = 0; row < commonHeight; row++) {
+            Cell sourceCell = sourceWall.getCell(sourceLeftCol, row);
+            Cell targetCell = targetWall.getCell(targetRightCol, row);
+
+            if (sourceCell != null
+                    && targetCell != null
+                    && sourceCell.isInfected()
+                    && !targetCell.isInfected()
+                    && targetCell.getState() == CellState.HEALTHY
+                    && sourceCell.getSpecies() != null) {
+
+                double probability = targetContext
+                        .getSimulationController()
+                        .computeInfectionProbability(
+                            targetCell,
+                            sourceCell.getSpecies(),
+                            targetWall.getMaterial()
+                        );
 
                 if (Math.random() < probability) {
                     targetCell.infect(sourceCell.getSpecies());
