@@ -228,11 +228,11 @@ public class GridController {
 
     private void reset() {
         currentStepIndex = 0;
-        
-
         history.clear();
 
-        gridView.reset();
+        resetAllWalls();
+
+        gridView.updateViewFromModel();
         markShelvesOnGrid();
         gridView.draw();
 
@@ -243,7 +243,7 @@ public class GridController {
         updateTimeSlider();
         updateWallNavigationView();
 
-        mainView.getStatusLabel().setText("Simulation reset.");
+        mainView.getStatusLabel().setText("Simulation reset for all walls.");
     }
 
     private void updateStatistics() {
@@ -801,6 +801,25 @@ public class GridController {
                     cell.setSpecies(null);
                     cell.setMoldLevel(0.0);
                     cell.setAge(0);
+                }
+            }
+        }
+    }
+
+    private void resetAllWalls() {
+        for (WallContext wallContext : wallManager.getWalls()) {
+            Wall wall = wallContext.getWall();
+
+            for (int row = 0; row < wall.getHeight(); row++) {
+                for (int col = 0; col < wall.getWidth(); col++) {
+                    Cell cell = wall.getCell(col, row);
+
+                    if (cell != null) {
+                        cell.setState(CellState.HEALTHY);
+                        cell.setSpecies(null);
+                        cell.setMoldLevel(0.0);
+                        cell.setAge(0);
+                    }
                 }
             }
         }
