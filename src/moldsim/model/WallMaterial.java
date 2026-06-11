@@ -5,5 +5,5 @@ public enum WallMaterial {
     WOOD,
     PLASTER,
     BRICK,
-    WALLPAPER;
+    DOCUMENT;
 }
