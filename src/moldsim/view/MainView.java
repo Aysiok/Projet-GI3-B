@@ -35,7 +35,6 @@ public class MainView extends BorderPane {
 
     // ── Status bar ────────────────────────────────────────────
     private Label statusLabel;
-    private Label generationLabel;
     private Label infectedLabel;
     private Label riskLabel;
     private Label weekLabel;
@@ -148,14 +147,12 @@ public class MainView extends BorderPane {
         // Stats
         sidebar.getChildren().add(sectionLabel("Statistics"));
 
-        generationLabel = statLabel("Step: 0");
         weekLabel       = statLabel("Time elapsed: 0 week(s)");
         stepLabel       = statLabel("Saved step: 0 / 0");
         infectedLabel   = statLabel("Infected: 0 (0.0%)");
         riskLabel       = statLabel("Risk: Low");
 
         sidebar.getChildren().addAll(
-            generationLabel,
             weekLabel,
             stepLabel,
             infectedLabel,
@@ -259,7 +256,6 @@ public class MainView extends BorderPane {
     public Button getStepButton()          { return stepButton; }
     public Button getExportPdfButton()     { return exportPdfButton; }
     public Label getStatusLabel()          { return statusLabel; }
-    public Label getGenerationLabel()      { return generationLabel; }
     public Label getInfectedLabel()        { return infectedLabel; }
     public Label getRiskLabel()            { return riskLabel; }
     public GridView getGridView()          { return gridView; }
