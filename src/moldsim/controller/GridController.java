@@ -26,6 +26,10 @@ public class GridController {
     private boolean updatingTimeSlider;
     private boolean updatingControls;
 
+    private static final int SNAPSHOT_HEALTHY  = 0;
+    private static final int SNAPSHOT_INFECTED = 1;
+    private static final int SNAPSHOT_DEAD     = 2;
+
     public GridController(MainView mainView) {
         this.mainView = mainView;
         this.gridView = mainView.getGridView();
@@ -300,12 +304,17 @@ public class GridController {
 
         SimulationSnapshot snapshot = history.get(currentStepIndex);
 
-        gridView.restoreGridState(snapshot.getCellStates());
+        restoreAllWallsFromSnapshot(snapshot);
         restoreEnvironmentFromSnapshot(snapshot);
+
+        gridView.updateViewFromModel();
+        markShelvesOnGrid();
+        gridView.draw();
 
         updateStatistics();
         updateTimeDisplay();
         updateTimeSlider();
+        updateWallNavigationView();
 
         mainView.getStatusLabel().setText("Moved to week " + snapshot.getWeek() + ".");
     }
@@ -457,8 +466,19 @@ public class GridController {
     }
 
     private SimulationSnapshot createSnapshot(int week) {
-        int[][] gridState = gridView.copyGridState();
-        return new SimulationSnapshot(week, gridState, environment.getHumidity(), environment.getTemperature(), environment.getVentilation(),modelGrid.getMaterial());
+        // Important : on sauvegarde d'abord les modifications visibles dans le modèle.
+        gridView.syncModelFromView();
+
+        List<int[][]> wallStates = copyAllWallStates();
+
+        return new SimulationSnapshot(
+            week,
+            wallStates,
+            environment.getHumidity(),
+            environment.getTemperature(),
+            environment.getVentilation(),
+            modelGrid.getMaterial()
+        );
     }
 
     private void restoreEnvironmentFromSnapshot(SimulationSnapshot snapshot) {
@@ -693,6 +713,94 @@ public class GridController {
 
                 if (Math.random() < probability) {
                     targetCell.infect(sourceCell.getSpecies());
+                }
+            }
+        }
+    }
+
+    private List<int[][]> copyAllWallStates() {
+        List<int[][]> allStates = new ArrayList<>();
+
+        for (WallContext wallContext : wallManager.getWalls()) {
+            allStates.add(copyWallState(wallContext.getWall()));
+        }
+
+        return allStates;
+    }
+
+    private int[][] copyWallState(Wall wall) {
+        int height = wall.getHeight();
+        int width = wall.getWidth();
+
+        int[][] state = new int[height][width];
+
+        for (int row = 0; row < height; row++) {
+            for (int col = 0; col < width; col++) {
+                Cell cell = wall.getCell(col, row);
+
+                if (cell == null) {
+                    state[row][col] = SNAPSHOT_HEALTHY;
+                } else if (cell.getState() == CellState.INFECTED) {
+                    state[row][col] = SNAPSHOT_INFECTED;
+                } else if (cell.getState() == CellState.DEAD) {
+                    state[row][col] = SNAPSHOT_DEAD;
+                } else {
+                    state[row][col] = SNAPSHOT_HEALTHY;
+                }
+            }
+        }
+
+        return state;
+    }
+
+    private void restoreAllWallsFromSnapshot(SimulationSnapshot snapshot) {
+        List<int[][]> allStates = snapshot.getWallCellStates();
+        List<WallContext> wallContexts = wallManager.getWalls();
+
+        int limit = Math.min(allStates.size(), wallContexts.size());
+
+        for (int i = 0; i < limit; i++) {
+            Wall wall = wallContexts.get(i).getWall();
+            int[][] savedState = allStates.get(i);
+
+            restoreWallState(wall, savedState);
+        }
+    }
+
+    private void restoreWallState(Wall wall, int[][] savedState) {
+        if (wall == null || savedState == null) {
+            return;
+        }
+
+        int height = Math.min(wall.getHeight(), savedState.length);
+
+        for (int row = 0; row < height; row++) {
+            int width = Math.min(wall.getWidth(), savedState[row].length);
+
+            for (int col = 0; col < width; col++) {
+                Cell cell = wall.getCell(col, row);
+
+                if (cell == null) {
+                    continue;
+                }
+
+                int state = savedState[row][col];
+
+                if (state == SNAPSHOT_INFECTED) {
+                    cell.setState(CellState.HEALTHY);
+                    cell.setSpecies(null);
+                    cell.setMoldLevel(0.0);
+                    cell.setAge(0);
+                    cell.infect(MoldSpecies.CLADOSPORIUM);
+
+                } else if (state == SNAPSHOT_DEAD) {
+                    cell.kill();
+
+                } else {
+                    cell.setState(CellState.HEALTHY);
+                    cell.setSpecies(null);
+                    cell.setMoldLevel(0.0);
+                    cell.setAge(0);
                 }
             }
         }
