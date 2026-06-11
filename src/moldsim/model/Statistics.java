@@ -17,14 +17,14 @@ public class Statistics {
     // Pour la tendance : on compare avec le step précédent
     private final int previousInfectedCells;
 
-    public Statistics(Grid grid, int previousInfectedCells) {
+    public Statistics(Wall wall, int previousInfectedCells) {
         this.previousInfectedCells = previousInfectedCells;
 
         int healthy = 0, infected = 0, dead = 0;
         double totalAge = 0, totalMold = 0;
         double maxMold = 0, minMold = 100;
 
-        for (Cell[] row : grid.getCells()) {
+        for (Cell[] row : wall.getGrid()) {
             for (Cell c : row) {
                 switch (c.getState()) {
                     case HEALTHY  -> healthy++;
@@ -38,7 +38,7 @@ public class Statistics {
             }
         }
 
-        this.totalCells    = grid.getWidth() * grid.getHeight();
+        this.totalCells    = wall.getWidth() * wall.getHeight();
         this.healthyCells  = healthy;
         this.infectedCells = infected;
         this.deadCells     = dead;

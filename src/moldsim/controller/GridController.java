@@ -1,11 +1,8 @@
 package moldsim.controller;
 
-import moldsim.model.ShelfValue;
-import moldsim.model.Shelf;
+import moldsim.model.*;
 import moldsim.view.GridView;
 import moldsim.view.MainView;
-import moldsim.model.LocationContext;
-import moldsim.model.SimulationSnapshot;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -20,7 +17,7 @@ public class GridController {
     private LocationContext locationContext;
     private List<SimulationSnapshot> history;
     private int currentStepIndex;
-    private moldsim.model.Grid modelGrid;
+    private Wall modelGrid;
     private moldsim.model.Environment environment;
     private moldsim.controller.SimulationController simulation;
 
@@ -40,12 +37,12 @@ public class GridController {
     }
 
     public void initialize() {
-        modelGrid   = new moldsim.model.Grid(gridView.getColumns(), gridView.getRows(), false, moldsim.model.NeighborhoodMode.EIGHT);
+        modelGrid   = new Wall(gridView.getColumns(), gridView.getRows());
         environment = new moldsim.model.Environment();
         environment.setHumidity(mainView.getHumiditySlider().getValue());
         environment.setTemperature(mainView.getTemperatureSlider().getValue());
         environment.setVentilation(mainView.getVentilationSlider().getValue());
-        simulation  = new moldsim.controller.SimulationController(modelGrid, environment);
+        simulation  = new SimulationController(modelGrid, environment);
         gridView.setSimulation(simulation, modelGrid);
 
         mainView.getHumiditySlider().valueProperty().addListener((obs, oldValue, newValue) -> {
@@ -102,9 +99,7 @@ public class GridController {
             }
         });
 
-
         // Passe les étagères à la vue pour le rendu
-        gridView.setShelves(shelves);
         markShelvesOnGrid();
         gridView.draw();
 
@@ -126,7 +121,6 @@ public class GridController {
         int planks = Math.max(1, height / 5);
         Shelf shelf = new Shelf(id, col, row, width, height, planks, gridView.getNextShelfValue());
         shelves.add(shelf);
-        gridView.setShelves(shelves);
         markShelvesOnGrid();
         gridView.syncModelFromView();
         gridView.draw();
@@ -147,7 +141,6 @@ public class GridController {
                 gridView.setCellValue(r, c, null);
             }
         // Remarque les étagères restantes
-        gridView.setShelves(shelves);
         markShelvesOnGrid();
         gridView.syncModelFromView();
         gridView.draw();

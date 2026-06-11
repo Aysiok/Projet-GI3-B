@@ -17,7 +17,7 @@ public class Cell implements Serializable {
     private int age;              // nombre de pas survécus
     private CellState state;
     private MoldSpecies species;  // null si HEALTHY ou DEAD
-    private WallMaterial wallMaterial = WallMaterial.PLASTER;
+    private WallMaterial wallMaterial;
 
     /** Crée cellule saine aux coordonnées qu'on donne */
     public Cell(int x, int y) {
@@ -28,6 +28,10 @@ public class Cell implements Serializable {
         this.state = CellState.HEALTHY;
         this.species = null;
     }
+
+    public WallMaterial getWallMaterial() { return wallMaterial; }
+    public void setWallMaterial(WallMaterial wallMaterial) { this.wallMaterial = wallMaterial; }
+
 
     public boolean isInfected() {
         return state == CellState.INFECTED;
@@ -68,18 +72,34 @@ public class Cell implements Serializable {
         this.age++;
     }
 
-    public int getX() { return x; }
-    public int getY() { return y; }
+    public int getX() {
+        return x;
+    }
 
-    public double getMoldLevel() { return moldLevel; }
+    public int getY() {
+        return y;
+    }
+
+    public double getMoldLevel() {
+        return moldLevel;
+    }
+
     public void setMoldLevel(double moldLevel) {
         this.moldLevel = clamp(moldLevel);
     }
 
-    public int getAge() { return age; }
-    public void setAge(int age) { this.age = age; }
+    public int getAge() {
+        return age;
+    }
 
-    public CellState getState() { return state; }
+    public void setAge(int age) { 
+        this.age = age;
+    }
+
+    public CellState getState() { 
+        return state;
+    }
+
     public void setState(CellState state) {
         if (state == null) {
             throw new IllegalArgumentException("State cannot be null");
@@ -87,12 +107,12 @@ public class Cell implements Serializable {
         this.state = state;
     }
 
-    public MoldSpecies getSpecies() { return species; }
-    public void setSpecies(MoldSpecies species) { this.species = species; }
+    public MoldSpecies getSpecies() {
+        return species;
+    }
 
-    public WallMaterial getWallMaterial() { return wallMaterial; }
-    public void setWallMaterial(WallMaterial wallMaterial) {
-        this.wallMaterial = wallMaterial;
+    public void setSpecies(MoldSpecies species) { 
+        this.species = species;
     }
 
     /** Borne une valeur dans [0, 100]. */
@@ -105,7 +125,6 @@ public class Cell implements Serializable {
         return "Cell(" + x + "," + y + ", " + state
                 + (species != null ? " [" + species.name() + "]" : "")
                 + ", mold=" + String.format("%.1f", moldLevel)
-                + ", age=" + age
-                + ", material=" + wallMaterial + ")";
+                + ", age=" + age + ")";
     }
 }

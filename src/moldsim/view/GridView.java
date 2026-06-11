@@ -1,16 +1,11 @@
 package moldsim.view;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
-
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.input.MouseButton;
 import javafx.scene.paint.Color;
 import moldsim.controller.SimulationController;
-import moldsim.model.Grid;
-import moldsim.model.Shelf;
+import moldsim.model.Wall;
 
 /**
  * Graphical 2D grid drawn with JavaFX Canvas.
@@ -26,10 +21,8 @@ public class GridView extends Canvas {
     private final double cellSize;
     private final int[][] cells;
     private final int[][] cellType; // 0=wall, 1=shelf, 2=document
-    private final Random random;
-    private List<Shelf> shelves = new ArrayList<>();
     private SimulationController simulation;
-    private Grid modelGrid;
+    private Wall modelGrid;
     private CellClickListener cellClickListener;
     private boolean placementMode = false;
     private int ghostRow = -1;
@@ -50,7 +43,6 @@ public class GridView extends Canvas {
         this.cells     = new int[rows][columns];
         this.cellType = new int[rows][columns]; // tout à 0 (wall) par défaut
         this.cellValue = new moldsim.model.ShelfValue[rows][columns];
-        this.random    = new Random();
 
         setWidth(columns * cellSize);
         setHeight(rows * cellSize);
@@ -86,9 +78,7 @@ public class GridView extends Canvas {
          draw();
     }
 
-    public void setShelves(List<Shelf> shelves) {
-        this.shelves = shelves;
-    }
+
     public void enablePlacementMode(int width, int height) {
         this.placementMode = true;
         this.ghostWidth    = width;
@@ -115,7 +105,7 @@ public class GridView extends Canvas {
     public void setShelfPlacementListener(ShelfPlacementListener listener) {
         this.shelfPlacementListener = listener;
     }
-        public void setSimulation(SimulationController simulation, Grid modelGrid) {
+        public void setSimulation(SimulationController simulation, Wall modelGrid) {
         this.simulation = simulation;
         this.modelGrid  = modelGrid;
     }
@@ -255,20 +245,6 @@ public class GridView extends Canvas {
 
     private boolean isInside(int row, int column) {
         return row >= 0 && row < rows && column >= 0 && column < columns;
-    }
-
-    private int[][] copyCells() {
-        int[][] copy = new int[rows][columns];
-        for (int row = 0; row < rows; row++)
-            for (int column = 0; column < columns; column++)
-                copy[row][column] = cells[row][column];
-        return copy;
-    }
-
-    private void copyIntoCells(int[][] source) {
-        for (int row = 0; row < rows; row++)
-            for (int column = 0; column < columns; column++)
-                cells[row][column] = source[row][column];
     }
 
     public int getRows()    { return rows; }

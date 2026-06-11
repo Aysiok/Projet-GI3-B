@@ -1,11 +1,4 @@
 package moldsim;
-import moldsim.controller.*;
-import moldsim.model.*;
-
-import java.util.ArrayList;
-import java.util.List;
-
-import java.util.Scanner;
 
 import javafx.application.Application;
 import javafx.scene.Scene;
