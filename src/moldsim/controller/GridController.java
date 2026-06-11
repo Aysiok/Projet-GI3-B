@@ -17,7 +17,6 @@ public class GridController {
     private final MainView mainView;
     private final GridView gridView;
     private final List<Shelf> shelves;
-    private int generation;
     private LocationContext locationContext;
     private List<SimulationSnapshot> history;
     private int currentStepIndex;
@@ -33,7 +32,6 @@ public class GridController {
         this.mainView = mainView;
         this.gridView = mainView.getGridView();
         this.shelves  = new ArrayList<>();
-        this.generation = 0;
         this.locationContext = new LocationContext("Archive Room A", "North Wall");
         this.history = new ArrayList<>();
         this.currentStepIndex = 0;
@@ -249,7 +247,6 @@ public class GridController {
 
 
     private void reset() {
-        generation = 0;
         currentStepIndex = 0;
         
 
@@ -360,10 +357,23 @@ public class GridController {
     }
 
     private void exportPdf() {
-        // TODO: implement after merge with CLI branch
-        mainView.getStatusLabel().setText("PDF export coming soon.");
+        moldsim.model.Statistics stats = new moldsim.model.Statistics(modelGrid, 0);
+        java.util.List<moldsim.model.Statistics> statsList = new java.util.ArrayList<>();
+        statsList.add(stats);
+
+        String filePath = "report_" + System.currentTimeMillis() + ".pdf";
+        moldsim.model.PdfExporter.export(statsList, environment, filePath);
+        mainView.getStatusLabel().setText("PDF exported: " + filePath);
+
+        try {
+            java.io.File file = new java.io.File(filePath);
+            if (file.exists() && java.awt.Desktop.isDesktopSupported()) {
+                java.awt.Desktop.getDesktop().open(file);
+            }
+        } catch (java.io.IOException e) {
+            mainView.getStatusLabel().setText("PDF exported but could not open: " + e.getMessage());
         }
-    
+    }
 
     private void advanceOneNewStep() {
         gridView.syncModelFromView();
@@ -372,7 +382,6 @@ public class GridController {
         int nextStep = currentStepIndex + 1;
         int nextWeek = nextStep;
 
-        int[][] gridState = gridView.copyGridState();
 
         history.add(createSnapshot(nextStep));
         currentStepIndex = history.size() - 1;
