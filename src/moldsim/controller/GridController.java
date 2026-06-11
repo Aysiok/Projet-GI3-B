@@ -13,11 +13,12 @@ import java.util.List;
 public class GridController {
     private final MainView mainView;
     private final GridView gridView;
-    private final List<Shelf> shelves;
+    private List<Shelf> shelves;
     private LocationContext locationContext;
     private List<SimulationSnapshot> history;
     private int currentStepIndex;
     private Wall modelGrid;
+    private WallManager wallManager;
     private moldsim.model.Environment environment;
     private moldsim.controller.SimulationController simulation;
 
@@ -29,6 +30,7 @@ public class GridController {
         this.mainView = mainView;
         this.gridView = mainView.getGridView();
         this.shelves  = new ArrayList<>();
+        this.wallManager = new WallManager();
         this.locationContext = new LocationContext("Archive Room A", "North Wall");
         this.history = new ArrayList<>();
         this.currentStepIndex = 0;
@@ -37,13 +39,13 @@ public class GridController {
     }
 
     public void initialize() {
-        modelGrid   = new Wall(gridView.getColumns(), gridView.getRows());
         environment = new moldsim.model.Environment();
         environment.setHumidity(mainView.getHumiditySlider().getValue());
         environment.setTemperature(mainView.getTemperatureSlider().getValue());
         environment.setVentilation(mainView.getVentilationSlider().getValue());
-        simulation  = new SimulationController(modelGrid, environment);
-        gridView.setSimulation(simulation, modelGrid);
+
+        createDefaultWalls();
+        loadCurrentWallIntoView();
 
         mainView.getHumiditySlider().valueProperty().addListener((obs, oldValue, newValue) -> {
             environment.setHumidity(newValue.doubleValue());
@@ -122,6 +124,8 @@ public class GridController {
 });
         
         mainView.getPreviousStepButton().setOnAction(event -> previousStep());
+        mainView.getPreviousWallButton().setOnAction(event -> moveToPreviousWall());
+        mainView.getNextWallButton().setOnAction(event -> moveToNextWall());
 
         mainView.getTimeSlider().valueProperty().addListener((obs, oldValue, newValue) -> {
             if (updatingTimeSlider) {
@@ -148,6 +152,8 @@ public class GridController {
     }
 
     private void markShelvesOnGrid() {
+        gridView.clearStructure();
+
         for (Shelf shelf : shelves) {
             int startX = shelf.getX();
             int startY = shelf.getY();
@@ -155,30 +161,35 @@ public class GridController {
             int h      = shelf.getHeight();
             int planks = shelf.getPlankCount();
             double plankSpacing = (double) h / (planks + 1);
-        
-                    // Planches = bois
+
             for (int p = 0; p < planks; p++) {
                 int plankRow = startY + (int) ((p + 1) * plankSpacing);
+
                 for (int col = startX; col < startX + w; col++) {
                     gridView.setCellType(plankRow, col, GridView.TYPE_SHELF);
-                    moldsim.model.Cell cell = modelGrid.getCell(col, plankRow);
-                    if (cell != null) cell.setWallMaterial(moldsim.model.WallMaterial.WOOD);
+
+                    Cell cell = modelGrid.getCell(col, plankRow);
+                    if (cell != null) {
+                        cell.setWallMaterial(WallMaterial.WOOD);
+                    }
                 }
             }
 
-            // Espaces entre planches = documents
             for (int p = 0; p < planks; p++) {
-                int plankRow     = startY + (int) ((p + 1) * plankSpacing);
+                int plankRow = startY + (int) ((p + 1) * plankSpacing);
                 int prevPlankRow = p == 0
-                    ? startY
-                    : startY + (int) (p * plankSpacing);
+                        ? startY
+                        : startY + (int) (p * plankSpacing);
 
                 for (int row = prevPlankRow + 1; row < plankRow; row++) {
                     for (int col = startX; col < startX + w; col++) {
                         gridView.setCellType(row, col, GridView.TYPE_DOCUMENT);
                         gridView.setCellValue(row, col, shelf.getValue());
-                        moldsim.model.Cell cell = modelGrid.getCell(col, row);
-                        if (cell != null) cell.setWallMaterial(moldsim.model.WallMaterial.DOCUMENT);
+
+                        Cell cell = modelGrid.getCell(col, row);
+                        if (cell != null) {
+                            cell.setWallMaterial(WallMaterial.DOCUMENT);
+                        }
                     }
                 }
             }
@@ -226,6 +237,7 @@ public class GridController {
         updateStatistics();
         updateTimeDisplay();
         updateTimeSlider();
+        updateWallNavigationView();
 
         mainView.getStatusLabel().setText("Simulation reset.");
     }
@@ -342,7 +354,14 @@ public class GridController {
 
     private void advanceOneNewStep() {
         gridView.syncModelFromView();
-        gridView.stepSimulation();
+
+        for (WallContext wallContext : wallManager.getWalls()) {
+            wallContext.getSimulationController().step();
+        }
+
+        propagateBetweenAdjacentWalls();
+
+        gridView.updateViewFromModel();
 
         int nextWeek = currentStepIndex + 1;
 
@@ -352,6 +371,7 @@ public class GridController {
         updateStatistics();
         updateTimeDisplay();
         updateTimeSlider();
+        updateWallNavigationView();
 
         mainView.getStatusLabel().setText("Advanced to week " + nextWeek + ".");
     }
@@ -477,4 +497,158 @@ public class GridController {
         }
     }
 
+    private void createDefaultWalls() {
+        int width = gridView.getColumns(); //à remplacer par la taille choisi lors du lancement 
+        int height = gridView.getRows(); // à remplacer par la taille choisi lors du lancement
+
+        WallMaterial defaultMaterial = toWallMaterial(mainView.getMaterialComboBox().getValue());
+
+        wallManager.addWall(new WallContext(
+            "North Wall",
+            width,
+            height,
+            defaultMaterial,
+            environment
+        ));
+
+        wallManager.addWall(new WallContext(
+            "East Wall",
+            width,
+            height,
+            defaultMaterial,
+            environment
+        ));
+
+        wallManager.addWall(new WallContext(
+            "South Wall",
+            width,
+            height,
+            defaultMaterial,
+            environment
+        ));
+
+        wallManager.addWall(new WallContext(
+            "West Wall",
+            width,
+            height,
+            defaultMaterial,
+            environment
+        ));
+    }
+
+    private void loadCurrentWallIntoView() {
+        WallContext current = wallManager.getCurrentWallContext();
+
+        modelGrid = current.getWall();
+        shelves = current.getShelves();
+        simulation = current.getSimulationController();
+
+        gridView.setSimulation(simulation, modelGrid);
+
+        gridView.clearStructure();
+        gridView.updateViewFromModel();
+
+        markShelvesOnGrid();
+        gridView.draw();
+
+        locationContext.setWallName(current.getName());
+        mainView.updateCurrentLocationLabel(locationContext.getDisplayName());
+
+        updateWallNavigationView();
+    }
+
+    private void updateWallNavigationView() {
+        WallContext previous = wallManager.getPreviousWallContext();
+        WallContext current = wallManager.getCurrentWallContext();
+        WallContext next = wallManager.getNextWallContext();
+
+        mainView.getLeftWallPreview().drawPreview(previous.getWall(), true);
+        mainView.getRightWallPreview().drawPreview(next.getWall(), false);
+
+        mainView.updateWallNavigationLabels(
+            previous.getName(),
+            current.getName(),
+            next.getName()
+        );
+    }
+
+    private void moveToPreviousWall() {
+        saveCurrentWallBeforeSwitch();
+
+        wallManager.moveToPreviousWall();
+
+        loadCurrentWallIntoView();
+        resetHistoryForCurrentWall();
+
+        mainView.getStatusLabel().setText(
+            "Moved to " + wallManager.getCurrentWallContext().getName() + "."
+        );
+    }
+
+    private void moveToNextWall() {
+        saveCurrentWallBeforeSwitch();
+
+        wallManager.moveToNextWall();
+
+        loadCurrentWallIntoView();
+        resetHistoryForCurrentWall();
+
+        mainView.getStatusLabel().setText(
+            "Moved to " + wallManager.getCurrentWallContext().getName() + "."
+        );
+    }
+
+   
+
+    private void saveCurrentWallBeforeSwitch() {
+        gridView.syncModelFromView();
+    }
+
+    private void resetHistoryForCurrentWall() {
+        history.clear();
+        currentStepIndex = 0;
+        saveCurrentSnapshot();
+        updateTimeDisplay();
+        updateTimeSlider();
+    }
+
+    private void propagateBetweenAdjacentWalls() {
+        List<WallContext> walls = wallManager.getWalls();
+
+        for (int i = 0; i < walls.size(); i++) {
+            WallContext current = walls.get(i);
+            WallContext next = walls.get((i + 1) % walls.size());
+
+            propagateRightEdgeToLeftEdge(current, next);
+        }
+    }
+
+    private void propagateRightEdgeToLeftEdge(WallContext sourceContext, WallContext targetContext) {
+        Wall sourceWall = sourceContext.getWall();
+        Wall targetWall = targetContext.getWall();
+
+        int sourceRightCol = sourceWall.getWidth() - 1;
+        int targetLeftCol = 0;
+
+        int commonHeight = Math.min(sourceWall.getHeight(), targetWall.getHeight());
+
+        for (int row = 0; row < commonHeight; row++) {
+            Cell sourceCell = sourceWall.getCell(sourceRightCol, row);
+            Cell targetCell = targetWall.getCell(targetLeftCol, row);
+
+            if (sourceCell != null
+                    && targetCell != null
+                    && sourceCell.isInfected()
+                    && !targetCell.isInfected()
+                    && targetCell.getState() == CellState.HEALTHY
+                    && sourceCell.getSpecies() != null) {
+
+                double probability = 0.08;
+
+                if (Math.random() < probability) {
+                    targetCell.infect(sourceCell.getSpecies());
+                }
+            }
+        }
+    }
 }

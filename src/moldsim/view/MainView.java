@@ -50,6 +50,18 @@ public class MainView extends BorderPane {
     // ── Grid placeholder (sera remplacé par GridView) ─────────
     private GridView gridView;
 
+    // ── Wall preview ─────────
+    private WallPreviewView leftWallPreview;
+    private WallPreviewView rightWallPreview;
+
+    private Button previousWallButton;
+    private Button nextWallButton;
+
+    private Label leftWallNameLabel;
+    private Label rightWallNameLabel;
+    private Label currentWallNameLabel;
+
+
     /**
      * Builds the full layout of the application.
      */
@@ -126,7 +138,7 @@ public class MainView extends BorderPane {
         Label matLabel = new Label("Wall Material");
         matLabel.setStyle("-fx-text-fill: #ccc; -fx-font-size: 11;");
         materialComboBox = new ComboBox<>();
-        materialComboBox.getItems().addAll("Plaster", "Concrete", "Wood", "Brick", "Wallpaper");
+        materialComboBox.getItems().addAll("Plaster", "Concrete", "Wood", "Brick", "Document");
         materialComboBox.setValue("Plaster");
         materialComboBox.setMaxWidth(Double.MAX_VALUE);
 
@@ -166,12 +178,44 @@ public class MainView extends BorderPane {
     }
 
     // ── Grid area ─────────────────────────────────────────────
-    private javafx.scene.layout.StackPane buildGridArea() {
-        javafx.scene.layout.StackPane stack = new javafx.scene.layout.StackPane();
-        stack.setStyle("-fx-background-color: #1A1A1A;");
-        gridView = new GridView(50, 60, 11.0);
-        stack.getChildren().add(gridView);
-        return stack;
+    private javafx.scene.layout.HBox buildGridArea() {
+        javafx.scene.layout.HBox container = new javafx.scene.layout.HBox(10);
+        container.setPadding(new Insets(10));
+        container.setStyle("-fx-background-color: #1A1A1A;");
+
+        int rows = 50;
+        int columns = 60;
+        double cellSize = 11.0;
+
+        leftWallPreview = new WallPreviewView(rows, 5, cellSize);
+        rightWallPreview = new WallPreviewView(rows, 5, cellSize);
+
+        gridView = new GridView(rows, columns, cellSize);
+
+        previousWallButton = new Button("◀");
+        nextWallButton = new Button("▶");
+
+        leftWallNameLabel = new Label("Previous wall");
+        leftWallNameLabel.setStyle("-fx-text-fill: #ccc; -fx-font-size: 11;");
+
+        rightWallNameLabel = new Label("Next wall");
+        rightWallNameLabel.setStyle("-fx-text-fill: #ccc; -fx-font-size: 11;");
+
+        currentWallNameLabel = new Label("Current wall");
+        currentWallNameLabel.setStyle("-fx-text-fill: white; -fx-font-size: 12; -fx-font-weight: bold;");
+
+        javafx.scene.layout.VBox leftBox = new javafx.scene.layout.VBox(5);
+        leftBox.getChildren().addAll(previousWallButton, leftWallPreview, leftWallNameLabel);
+
+        javafx.scene.layout.VBox centerBox = new javafx.scene.layout.VBox(5);
+        centerBox.getChildren().addAll(gridView, currentWallNameLabel);
+
+        javafx.scene.layout.VBox rightBox = new javafx.scene.layout.VBox(5);
+        rightBox.getChildren().addAll(nextWallButton, rightWallPreview, rightWallNameLabel);
+
+        container.getChildren().addAll(leftBox, centerBox, rightBox);
+
+        return container;
     }
 
     // ── Bottom controls ───────────────────────────────────────
@@ -303,6 +347,28 @@ public class MainView extends BorderPane {
         return newShelfButton;
     }
 
+
+    public WallPreviewView getLeftWallPreview() {
+        return leftWallPreview;
+    }
+
+    public WallPreviewView getRightWallPreview() {
+        return rightWallPreview;
+    }
+
+    public Button getPreviousWallButton() {
+        return previousWallButton;
+    }
+
+    public Button getNextWallButton() {
+        return nextWallButton;
+    }
+
+    public void updateWallNavigationLabels(String previousWall, String currentWall, String nextWall) {
+        leftWallNameLabel.setText(previousWall);
+        currentWallNameLabel.setText(currentWall);
+        rightWallNameLabel.setText(nextWall);
+    }
     
 
 }
