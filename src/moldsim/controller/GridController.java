@@ -321,12 +321,21 @@ public class GridController {
     }
 
     private void exportPdf() {
-        moldsim.model.Statistics stats = new moldsim.model.Statistics(modelGrid, 0);
-        java.util.List<moldsim.model.Statistics> statsList = new java.util.ArrayList<>();
-        statsList.add(stats);
+        List<moldsim.model.Statistics> statsList = new ArrayList<>();
+        List<java.util.List<String>> allLogs = new ArrayList<>();
+        int previousInfected = 0;
+        for (SimulationSnapshot snap : history) {
+            gridView.restoreGridState(snap.getCellStates()); // pour lire l'état
+            Statistics stats = new Statistics(modelGrid, previousInfected);
+            previousInfected = stats.getInfectedCells();
+            statsList.add(stats);
+            allLogs.add(snap.getAlertLogs());
+        }
+    // restaurer l'état courant
+    gridView.restoreGridState(history.get(currentStepIndex).getCellStates());
 
         String filePath = "report_" + System.currentTimeMillis() + ".pdf";
-        moldsim.model.PdfExporter.export(statsList, environment, filePath);
+        PdfExporter.export(statsList, environment, allLogs, filePath);
         mainView.getStatusLabel().setText("PDF exported: " + filePath);
 
         try {
@@ -437,7 +446,10 @@ public class GridController {
 
     private SimulationSnapshot createSnapshot(int week) {
         int[][] gridState = gridView.copyGridState();
-        return new SimulationSnapshot(week, gridState, environment.getHumidity(), environment.getTemperature(), environment.getVentilation(),modelGrid.getMaterial());
+        List<String> logs = simulation.getAlertController().getHistory().stream().filter(e -> e.getWeek() == week).map(e -> "[" + e.getType() + "] " + e.getAlertLevel() + " — " 
+        + (e.getShelf() != null ? "étagère " + e.getShelf().getId() : 
+        String.format("taux %.0f%%", e.getMoldRate() * 100))).collect(java.util.stream.Collectors.toList());
+        return new SimulationSnapshot(week, gridState, environment.getHumidity(),environment.getTemperature(), environment.getVentilation(),modelGrid.getMaterial(), logs);
     }
 
     private void restoreEnvironmentFromSnapshot(SimulationSnapshot snapshot) {

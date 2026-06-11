@@ -1,5 +1,7 @@
 package moldsim.model;
 
+import java.util.List;
+
 /**
  * Represents a saved state of the simulation at a given step.
  */
@@ -12,14 +14,16 @@ public class SimulationSnapshot {
     private final double temperature;
     private final double ventilation;
     private final WallMaterial material;
+    private final List<String> alertLogs;
 
-    public SimulationSnapshot(int week, int[][] cellStates, double humidity, double temperature, double ventilation, WallMaterial material) {
+    public SimulationSnapshot(int week, int[][] cellStates, double humidity, double temperature, double ventilation, WallMaterial material, List<String> alertLogs) {
         this.week = week;
         this.cellStates = cellStates;
         this.humidity = humidity;
         this.temperature = temperature;
         this.ventilation = ventilation;
         this.material = material;
+        this.alertLogs = alertLogs;
     }
 
     public int getWeek() {
@@ -44,5 +48,9 @@ public class SimulationSnapshot {
 
     public WallMaterial getMaterial() {
         return material;
+    }
+
+    public List<String> getAlertLogs() {
+        return alertLogs;
     }
 }
