@@ -38,7 +38,6 @@ public class PdfExporter {
             document.add(new Paragraph("Humidity    : " + env.getHumidity() + " %", NORMAL_FONT));
             document.add(new Paragraph("Temperature : " + env.getTemperature() + " °C", NORMAL_FONT));
             document.add(new Paragraph("Ventilation : " + env.getVentilation() + " %", NORMAL_FONT));
-            document.add(new Paragraph("Material    : " + env.getMaterial(), NORMAL_FONT));
             document.add(Chunk.NEWLINE);
 
             // ── Statistics table ───────────────────────────────

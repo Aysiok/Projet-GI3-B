@@ -88,26 +88,21 @@ public class SimulationController {
         });
     }
 
-    private double computeInfectionProbability(Cell neighbor,
-                                                MoldSpecies species,
-                                                WallMaterial wallMaterial) {
-        double humidity    = environment.getHumidity();
+    private double computeInfectionProbability(Cell neighbor, MoldSpecies species, WallMaterial wallMaterial) {
+        double humidity = environment.getHumidity();
         double temperature = environment.getTemperature();
         double ventilation = environment.getVentilation();
         if (humidity < species.getMinHumidity()) return 0.0;
         if (temperature < species.getMinTemperature()
          || temperature > species.getMaxTemperature()) return 0.0;
-        double fHumidity = (humidity - species.getMinHumidity())
-                           / (100.0 - species.getMinHumidity());
+        double fHumidity = (humidity - species.getMinHumidity()) / (100.0 - species.getMinHumidity());
         fHumidity = Math.max(0.0, Math.min(1.0, fHumidity));
-        double tempMid      = (species.getMinTemperature() + species.getMaxTemperature()) / 2.0;
-        double tempRange    = tempMid - species.getMinTemperature();
-        double fTemperature = Math.max(0.0,
-            1.0 - Math.abs(temperature - tempMid) / tempRange);
-        double fMaterial    = getMaterialFactor(neighbor.getWallMaterial(), wallMaterial);
+        double tempMid = (species.getMinTemperature() + species.getMaxTemperature()) / 2.0;
+        double tempRange = tempMid - species.getMinTemperature();
+        double fTemperature = Math.max(0.0, 1.0 - Math.abs(temperature - tempMid) / tempRange);
+        double fMaterial = getMaterialFactor(neighbor.getWallMaterial(), wallMaterial);
         double fVentilation = 1.0 - (ventilation / 200.0);
-        return 0.10 * fHumidity * fTemperature * fMaterial
-                    * species.getInfectionProbability() * fVentilation;
+        return 0.10 * fHumidity * fTemperature * fMaterial * species.getInfectionProbability() * fVentilation;
     }
 
     private double getMaterialFactor(WallMaterial cellMaterial, WallMaterial wallMaterial) {

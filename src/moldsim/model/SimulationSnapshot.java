@@ -5,7 +5,6 @@ package moldsim.model;
  */
 public class SimulationSnapshot {
 
-    private final int step;
     private final int week;
     private final int[][] cellStates;
 
@@ -14,26 +13,13 @@ public class SimulationSnapshot {
     private final double ventilation;
     private final WallMaterial material;
 
-    public SimulationSnapshot(
-            int step,
-            int week,
-            int[][] cellStates,
-            double humidity,
-            double temperature,
-            double ventilation,
-            WallMaterial material
-    ) {
-        this.step = step;
+    public SimulationSnapshot(int week, int[][] cellStates, double humidity, double temperature, double ventilation, WallMaterial material) {
         this.week = week;
         this.cellStates = cellStates;
         this.humidity = humidity;
         this.temperature = temperature;
         this.ventilation = ventilation;
         this.material = material;
-    }
-
-    public int getStep() {
-        return step;
     }
 
     public int getWeek() {

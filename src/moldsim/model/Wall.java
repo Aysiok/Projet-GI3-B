@@ -14,7 +14,7 @@ public class Wall implements Serializable {
     private final int width;
     private final int height;
     private final Cell[][] grid;
-    private final WallMaterial material;
+    private WallMaterial material;
 
     /** mur avec des cellules same */
     public Wall(int width, int height, WallMaterial material) {
@@ -115,6 +115,10 @@ public class Wall implements Serializable {
 
     public WallMaterial getMaterial(){
         return material;
+    }
+
+    public void setMaterial(WallMaterial material) {
+        this.material = material;
     }
     
     public double getContaminationRate() {

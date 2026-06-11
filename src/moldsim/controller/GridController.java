@@ -63,39 +63,11 @@ public class GridController {
 
 
         mainView.getMaterialComboBox().valueProperty().addListener((obs, oldValue, newValue) -> {
-            moldsim.model.WallMaterial mat;
-
-            switch (newValue) {
-                case "Concrete":
-                    mat = moldsim.model.WallMaterial.CONCRETE;
-                    break;
-                case "Wood":
-                    mat = moldsim.model.WallMaterial.WOOD;
-                    break;
-                case "Brick":
-                    mat = moldsim.model.WallMaterial.BRICK;
-                    break;
-                case "Document":
-                    mat = moldsim.model.WallMaterial.DOCUMENT;
-                    break;
-                default:
-                    mat = moldsim.model.WallMaterial.PLASTER;
-                    break;
-            }
-
-            environment.setMaterial(mat);
-
-            for (int row = 0; row < modelGrid.getHeight(); row++) {
-                for (int col = 0; col < modelGrid.getWidth(); col++) {
-                    modelGrid.getCell(col, row).setWallMaterial(mat);
-                }
-            }
-
+            WallMaterial mat = toWallMaterial(newValue);
+            modelGrid.setMaterial(mat);
             if (!updatingControls) {
                 gridView.syncModelFromView();
-                markCurrentStepAsModified(
-                    "Wall material changed at week " + currentStepIndex + ". Future steps were cleared."
-                );
+                markCurrentStepAsModified("Wall material changed at week " + currentStepIndex + ". Future steps were cleared.");
             }
         });
 
@@ -372,11 +344,9 @@ public class GridController {
         gridView.syncModelFromView();
         gridView.stepSimulation();
 
-        int nextStep = currentStepIndex + 1;
-        int nextWeek = nextStep;
+        int nextWeek = currentStepIndex + 1;
 
-
-        history.add(createSnapshot(nextStep));
+        history.add(createSnapshot(nextWeek));
         currentStepIndex = history.size() - 1;
 
         updateStatistics();
@@ -466,31 +436,9 @@ public class GridController {
         );
     }
 
-    private moldsim.model.WallMaterial getSelectedMaterial() {
-        String value = mainView.getMaterialComboBox().getValue();
-
-        switch (value) {
-            case "Concrete": return moldsim.model.WallMaterial.CONCRETE;
-            case "Wood":     return moldsim.model.WallMaterial.WOOD;
-            case "Brick":    return moldsim.model.WallMaterial.BRICK;
-            case "Document": return moldsim.model.WallMaterial.DOCUMENT;
-            default:         return moldsim.model.WallMaterial.PLASTER;
-        }
-    }
-
-    private SimulationSnapshot createSnapshot(int step) {
-        int week = step;
+    private SimulationSnapshot createSnapshot(int week) {
         int[][] gridState = gridView.copyGridState();
-
-        return new SimulationSnapshot(
-            step,
-            week,
-            gridState,
-            environment.getHumidity(),
-            environment.getTemperature(),
-            environment.getVentilation(),
-            getSelectedMaterial()
-        );
+        return new SimulationSnapshot(week, gridState, environment.getHumidity(), environment.getTemperature(), environment.getVentilation(),modelGrid.getMaterial());
     }
 
     private void restoreEnvironmentFromSnapshot(SimulationSnapshot snapshot) {
@@ -506,9 +454,7 @@ public class GridController {
         environment.setHumidity(snapshot.getHumidity());
         environment.setTemperature(snapshot.getTemperature());
         environment.setVentilation(snapshot.getVentilation());
-        environment.setMaterial(snapshot.getMaterial());
-
-        applyMaterialToAllCells(snapshot.getMaterial());
+        modelGrid.setMaterial(snapshot.getMaterial());
     }
 
     private String toMaterialLabel(moldsim.model.WallMaterial material) {
@@ -521,14 +467,14 @@ public class GridController {
         }
     }
 
-    private void applyMaterialToAllCells(moldsim.model.WallMaterial material) {
-        for (int row = 0; row < modelGrid.getHeight(); row++) {
-            for (int col = 0; col < modelGrid.getWidth(); col++) {
-                modelGrid.getCell(col, row).setWallMaterial(material);
-            }
+    private moldsim.model.WallMaterial toWallMaterial(String label) {
+        switch (label) {
+            case "Concrete": return moldsim.model.WallMaterial.CONCRETE;
+            case "Wood":     return moldsim.model.WallMaterial.WOOD;
+            case "Brick":    return moldsim.model.WallMaterial.BRICK;
+            case "Document": return moldsim.model.WallMaterial.DOCUMENT;
+            default:         return moldsim.model.WallMaterial.PLASTER;
         }
-
-        gridView.syncModelFromView();
     }
 
 }
