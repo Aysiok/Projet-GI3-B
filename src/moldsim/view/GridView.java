@@ -139,19 +139,8 @@ public class GridView extends Canvas {
     public void stepSimulation() {
         if (simulation != null) {
             simulation.step();
-            for (int row = 0; row < rows; row++) {
-                for (int col = 0; col < columns; col++) {
-                    moldsim.model.Cell cell = modelGrid.getCell(col, row);
-                    if (cell == null) continue;
-                    switch (cell.getState()) {
-                        case INFECTED: cells[row][col] = INFECTED; break;
-                        case DEAD:     cells[row][col] = DEAD;     break;
-                        default:       cells[row][col] = HEALTHY;  break;
-                    }
-                }
-            }
+            updateViewFromModel();
         }
-        draw();
     }
 
     public void reset() {
@@ -325,11 +314,51 @@ public class GridView extends Canvas {
         } else if (type == TYPE_DOCUMENT) {
             cell.setWallMaterial(moldsim.model.WallMaterial.DOCUMENT);
         } else {
-            cell.setWallMaterial(moldsim.model.WallMaterial.PLASTER);
+            cell.setWallMaterial(modelGrid.getMaterial());
         }
     }
     public interface ShelfPlacementListener {
         void onShelfPlaced(int row, int col, int width, int height);
         void onShelfRemoved(int row, int col); // ← ajoute ça
-}
+    }
+
+    public void updateViewFromModel() {
+        if (modelGrid == null) {
+            return;
+        }
+
+        for (int row = 0; row < rows; row++) {
+            for (int col = 0; col < columns; col++) {
+                moldsim.model.Cell cell = modelGrid.getCell(col, row);
+
+                if (cell == null) {
+                    continue;
+                }
+
+                switch (cell.getState()) {
+                    case INFECTED:
+                        cells[row][col] = INFECTED;
+                        break;
+                    case DEAD:
+                        cells[row][col] = DEAD;
+                        break;
+                    default:
+                        cells[row][col] = HEALTHY;
+                        break;
+                }
+            }
+        }
+
+        draw();
+    }
+
+    public void clearStructure() {
+        for (int row = 0; row < rows; row++) {
+            for (int col = 0; col < columns; col++) {
+                cellType[row][col] = TYPE_WALL;
+                cellValue[row][col] = null;
+            }
+        }
+    }
+
 }
