@@ -17,8 +17,8 @@ public class GridController {
     private List<SimulationSnapshot> history;
     private int currentStepIndex;
     private Wall modelGrid;
-    private moldsim.model.Environment environment;
-    private moldsim.controller.SimulationController simulation;
+    private Environment environment;
+    private SimulationController simulation;
     
     private boolean updatingTimeSlider;
     private boolean updatingControls;
@@ -36,7 +36,7 @@ public class GridController {
 
     public void initialize() {
         modelGrid   = new Wall(gridView.getColumns(), gridView.getRows());
-        environment = new moldsim.model.Environment();
+        environment = new Environment();
         environment.setHumidity(mainView.getHumiditySlider().getValue());
         environment.setTemperature(mainView.getTemperatureSlider().getValue());
         environment.setVentilation(mainView.getVentilationSlider().getValue());
@@ -100,6 +100,7 @@ public class GridController {
                 int planks = Math.max(1, height / 5);
                 Shelf shelf = new Shelf(id, col, row, width, height, planks, gridView.getNextShelfValue());
                 shelves.add(shelf);
+                simulation.updateShelves(shelves);
                 markShelvesOnGrid();
                 gridView.syncModelFromView();
                 gridView.draw();
@@ -117,6 +118,7 @@ public class GridController {
                         gridView.setCellType(r, c, GridView.TYPE_WALL);
                         gridView.setCellValue(r, c, null);
                     }
+                simulation.updateShelves(shelves);
                 markShelvesOnGrid();
                 gridView.syncModelFromView();
                 gridView.draw();
@@ -161,8 +163,8 @@ public class GridController {
                 int plankRow = startY + (int) ((p + 1) * plankSpacing);
                 for (int col = startX; col < startX + w; col++) {
                     gridView.setCellType(plankRow, col, GridView.TYPE_SHELF);
-                    moldsim.model.Cell cell = modelGrid.getCell(col, plankRow);
-                    if (cell != null) cell.setWallMaterial(moldsim.model.WallMaterial.WOOD);
+                    Cell cell = modelGrid.getCell(col, plankRow);
+                    if (cell != null) cell.setWallMaterial(WallMaterial.WOOD);
                 }
             }
 
@@ -174,16 +176,21 @@ public class GridController {
                     for (int col = startX; col < startX + w; col++) {
                         gridView.setCellType(row, col, GridView.TYPE_DOCUMENT);
                         gridView.setCellValue(row, col, shelf.getValue());
-                        moldsim.model.Cell cell = modelGrid.getCell(col, row);
-                        if (cell != null) cell.setWallMaterial(moldsim.model.WallMaterial.DOCUMENT);
+                        Cell cell = modelGrid.getCell(col, row);
+                        if (cell != null) cell.setWallMaterial(WallMaterial.DOCUMENT);
                     }
                 }
             }
         }
     }
 
-    private void play() { mainView.getStatusLabel().setText("Simulation started."); }
-    private void pause() { mainView.getStatusLabel().setText("Simulation paused."); }
+    private void play() {
+        mainView.getStatusLabel().setText("Simulation started.");
+    }
+
+    private void pause() {
+        mainView.getStatusLabel().setText("Simulation paused.");
+    }
 
     private void step() {
         if (currentStepIndex < history.size() - 1) goToStep(currentStepIndex + 1);
@@ -204,6 +211,7 @@ public class GridController {
         gridView.reset();
         markShelvesOnGrid();
         gridView.draw();
+        simulation.resetSensors();
         saveCurrentSnapshot();
         updateStatistics();
         updateTimeDisplay();
@@ -213,14 +221,20 @@ public class GridController {
 
     private void updateStatistics() {
         int infected = gridView.countInfectedCells();
-        int total    = gridView.getRows() * gridView.getColumns();
-        double pct   = total > 0 ? infected * 100.0 / total : 0.0;
+        int total = gridView.getRows() * gridView.getColumns();
+        double pct = total > 0 ? infected * 100.0 / total : 0.0;
 
         mainView.getInfectedLabel().setText(String.format("Infected: %d (%.1f%%)", infected, pct));
 
-        if (pct < 10) mainView.getRiskLabel().setText("Risk: Low");
-        else if (pct < 30) mainView.getRiskLabel().setText("Risk: Moderate");
-        else mainView.getRiskLabel().setText("Risk: High");
+        if (pct < 10){
+            mainView.getRiskLabel().setText("Risk: Low");
+        }
+        else if(pct < 30){
+            mainView.getRiskLabel().setText("Risk: Moderate");
+        }
+        else {
+            mainView.getRiskLabel().setText("Risk: High");
+        }
     }
 
     private void updateLocationFromInput() {
@@ -252,6 +266,7 @@ public class GridController {
         SimulationSnapshot snapshot = history.get(currentStepIndex);
         gridView.restoreGridState(snapshot.getCellStates());
         restoreEnvironmentFromSnapshot(snapshot);
+        simulation.resetSensors();
         updateStatistics();
         updateTimeDisplay();
         updateTimeSlider();
@@ -275,12 +290,12 @@ public class GridController {
     }
 
     private void exportPdf() {
-        moldsim.model.Statistics stats = new moldsim.model.Statistics(modelGrid, 0);
-        java.util.List<moldsim.model.Statistics> statsList = new java.util.ArrayList<>();
+        Statistics stats = new Statistics(modelGrid, 0);
+        List<moldsim.model.Statistics> statsList = new ArrayList<>();
         statsList.add(stats);
 
         String filePath = "report_" + System.currentTimeMillis() + ".pdf";
-        moldsim.model.PdfExporter.export(statsList, environment, filePath);
+        PdfExporter.export(statsList, environment, filePath);
         mainView.getStatusLabel().setText("PDF exported: " + filePath);
 
         try {
@@ -392,7 +407,7 @@ public class GridController {
         modelGrid.setMaterial(snapshot.getMaterial());
     }
 
-    private String toMaterialLabel(moldsim.model.WallMaterial material) {
+    private String toMaterialLabel(WallMaterial material) {
         switch (material) {
             case CONCRETE: return "Concrete";
             case WOOD:     return "Wood";
@@ -402,13 +417,13 @@ public class GridController {
         }
     }
 
-    private moldsim.model.WallMaterial toWallMaterial(String label) {
+    private WallMaterial toWallMaterial(String label) {
         switch (label) {
-            case "Concrete": return moldsim.model.WallMaterial.CONCRETE;
-            case "Wood":     return moldsim.model.WallMaterial.WOOD;
-            case "Brick":    return moldsim.model.WallMaterial.BRICK;
-            case "Document": return moldsim.model.WallMaterial.DOCUMENT;
-            default:         return moldsim.model.WallMaterial.PLASTER;
+            case "Concrete": return WallMaterial.CONCRETE;
+            case "Wood":     return WallMaterial.WOOD;
+            case "Brick":    return WallMaterial.BRICK;
+            case "Document": return WallMaterial.DOCUMENT;
+            default:         return WallMaterial.PLASTER;
         }
     }
 }
