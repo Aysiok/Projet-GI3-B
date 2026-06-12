@@ -5,7 +5,9 @@ import moldsim.view.GridView;
 import moldsim.view.MainView;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class GridController {
     private final MainView mainView;
@@ -38,7 +40,12 @@ public class GridController {
         environment.setHumidity(mainView.getHumiditySlider().getValue());
         environment.setTemperature(mainView.getTemperatureSlider().getValue());
         environment.setVentilation(mainView.getVentilationSlider().getValue());
-        simulation  = new SimulationController(modelGrid, environment);
+        ArchiveRoom room = new ArchiveRoom("Archive", environment);
+        room.setNorthWall(modelGrid);
+        Map<Wall, List<Shelf>> shelvesByWall = new HashMap<>();
+        shelvesByWall.put(modelGrid, shelves);
+        simulation = new SimulationController(room, shelvesByWall, environment);
+        
         gridView.setSimulation(simulation, modelGrid);
 
         mainView.getHumiditySlider().valueProperty().addListener((obs, oldValue, newValue) -> {
