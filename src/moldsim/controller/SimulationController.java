@@ -15,15 +15,17 @@ public class SimulationController {
     private final Environment environment;
     private final Random random;
     private final Map<Wall, List<Shelf>> shelvesByWall;
+    private final EventManager eventManager;
     private int currentWeek;
 
     public SimulationController(ArchiveRoom room, Map<Wall, List<Shelf>> shelvesByWall, Environment environment) {
-        this.room            = room;
-        this.environment     = environment;
-        this.sensors         = new ArrayList<>();
+        this.room = room;
+        this.environment = environment;
+        this.sensors = new ArrayList<>();
         this.alertController = new AlertController();
-        this.currentWeek     = 0;
-        this.random          = new Random();
+        this.currentWeek = 0;
+        this.random = new Random();
+        this.eventManager = new EventManager(environment);
         this.shelvesByWall = new HashMap<>(shelvesByWall);
         initSensors(shelvesByWall);
         alertController.setRecommendationEngine(new RecommendationEngine(room));
@@ -120,6 +122,10 @@ public class SimulationController {
 
     public List<SensorEvent> getHistory() {
         return alertController.getHistory();
+    }
+
+    public EventManager getEventManager() {
+        return eventManager;
     }
 
     public void updateShelves(List<Shelf> shelves) {
