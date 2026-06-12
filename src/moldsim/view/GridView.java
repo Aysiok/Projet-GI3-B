@@ -4,7 +4,6 @@ import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.input.MouseButton;
 import javafx.scene.paint.Color;
-import javafx.scene.shape.DrawMode;
 import moldsim.controller.SimulationController;
 import moldsim.model.*;
 /**
@@ -20,13 +19,14 @@ import moldsim.model.*;
 public class GridView extends Canvas {
 
     // ── cell states ──────────────────────────────────────────────────────────
-    private static final int HEALTHY  = 0;
+    private static final int HEALTHY = 0;
     private static final int INFECTED = 1;
-    private static final int DEAD     = 2;
+    private static final int DEAD = 2;
+    private static final int SPORE = 3;
 
     // ── cell types (public so the controller can reference them) ─────────────
-    public static final int TYPE_WALL     = 0;
-    public static final int TYPE_SHELF    = 1;
+    public static final int TYPE_WALL = 0;
+    public static final int TYPE_SHELF = 1;
     public static final int TYPE_DOCUMENT = 2;
 
     // ── grid data ─────────────────────────────────────────────────────────────
@@ -49,7 +49,7 @@ public class GridView extends Canvas {
     private boolean placementMode = false;
     private int ghostRow = -1;
     private int ghostCol = -1;
-    private int ghostWidth  = 4;
+    private int ghostWidth = 4;
     private int ghostHeight = 20;
 
     // ── misc ──────────────────────────────────────────────────────────────────
