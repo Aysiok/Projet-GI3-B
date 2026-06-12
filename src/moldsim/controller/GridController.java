@@ -12,6 +12,8 @@ import java.util.Map;
  * Controller for the grid interface.
  * Connects MainView controls to GridView actions.
  */
+
+
 public class GridController {
     private final MainView mainView;
     private final GridView gridView;
@@ -27,6 +29,10 @@ public class GridController {
     private boolean updatingTimeSlider;
     private boolean updatingControls;
 
+    // Play/Pause timer
+    private javafx.animation.Timeline simulationTimer;
+    private boolean isRunning = false;
+
     public GridController(MainView mainView) {
         this.mainView = mainView;
         this.gridView = mainView.getGridView();
@@ -38,6 +44,11 @@ public class GridController {
         this.updatingControls = false;
     }
 
+    public GridController(MainView mainView, Wall northWall) {
+    this(mainView);
+    this.modelGrid = northWall;
+    }
+    
     public void initialize() {
         modelGrid   = new Wall(gridView.getColumns(), gridView.getRows());
         environment = new Environment();
@@ -195,12 +206,33 @@ public class GridController {
     }
 
     private void play() {
-        mainView.getStatusLabel().setText("Simulation started.");
-    }
+    if (isRunning) return;
+    isRunning = true;
+
+    // Create a timer that calls step() automatically
+    double delay = 1.1 - (mainView.getSpeedSlider().getValue() / 10.0);
+    simulationTimer = new javafx.animation.Timeline(
+        new javafx.animation.KeyFrame(
+            javafx.util.Duration.seconds(delay),
+            e -> step()
+        )
+    );
+    simulationTimer.setCycleCount(javafx.animation.Animation.INDEFINITE);
+    simulationTimer.play();
+
+    mainView.getStatusLabel().setText("Simulation running...");
+}
 
     private void pause() {
-        mainView.getStatusLabel().setText("Simulation paused.");
+    if (!isRunning) return;
+    isRunning = false;
+
+    if (simulationTimer != null) {
+        simulationTimer.stop();
     }
+
+    mainView.getStatusLabel().setText("Simulation paused.");
+}
 
     private void step() {
         if (currentStepIndex < history.size() - 1) {
@@ -321,21 +353,12 @@ public class GridController {
     }
 
     private void exportPdf() {
-        List<moldsim.model.Statistics> statsList = new ArrayList<>();
-        List<java.util.List<String>> allLogs = new ArrayList<>();
-        int previousInfected = 0;
-        for (SimulationSnapshot snap : history) {
-            gridView.restoreGridState(snap.getCellStates()); // pour lire l'état
-            Statistics stats = new Statistics(modelGrid, previousInfected);
-            previousInfected = stats.getInfectedCells();
-            statsList.add(stats);
-            allLogs.add(snap.getAlertLogs());
-        }
-    // restaurer l'état courant
-    gridView.restoreGridState(history.get(currentStepIndex).getCellStates());
+        moldsim.model.Statistics stats = new moldsim.model.Statistics(modelGrid, 0);
+        java.util.List<moldsim.model.Statistics> statsList = new java.util.ArrayList<>();
+        statsList.add(stats);
 
         String filePath = "report_" + System.currentTimeMillis() + ".pdf";
-        PdfExporter.export(statsList, environment, allLogs, filePath);
+        moldsim.model.PdfExporter.export(statsList, environment, filePath);
         mainView.getStatusLabel().setText("PDF exported: " + filePath);
 
         try {
@@ -446,10 +469,7 @@ public class GridController {
 
     private SimulationSnapshot createSnapshot(int week) {
         int[][] gridState = gridView.copyGridState();
-        List<String> logs = simulation.getAlertController().getHistory().stream().filter(e -> e.getWeek() == week).map(e -> "[" + e.getType() + "] " + e.getAlertLevel() + " — " 
-        + (e.getShelf() != null ? "étagère " + e.getShelf().getId() : 
-        String.format("taux %.0f%%", e.getMoldRate() * 100))).collect(java.util.stream.Collectors.toList());
-        return new SimulationSnapshot(week, gridState, environment.getHumidity(),environment.getTemperature(), environment.getVentilation(),modelGrid.getMaterial(), logs);
+        return new SimulationSnapshot(week, gridState, environment.getHumidity(), environment.getTemperature(), environment.getVentilation(),modelGrid.getMaterial());
     }
 
     private void restoreEnvironmentFromSnapshot(SimulationSnapshot snapshot) {
@@ -487,5 +507,6 @@ public class GridController {
             default:         return moldsim.model.WallMaterial.PLASTER;
         }
     }
+    
 
 }
