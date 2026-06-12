@@ -4,6 +4,7 @@ import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.input.MouseButton;
 import javafx.scene.paint.Color;
+import javafx.scene.shape.DrawMode;
 import moldsim.controller.SimulationController;
 import moldsim.model.*;
 /**
@@ -53,6 +54,8 @@ public class GridView extends Canvas {
 
     // ── misc ──────────────────────────────────────────────────────────────────
     private ShelfValue nextShelfValue = ShelfValue.MEDIUM;
+    public enum DrawMode { POINT, BRUSH, RECTANGLE }
+    private DrawMode drawMode = DrawMode.POINT;
 
     // ═════════════════════════════════════════════════════════════════════════
     //  Construction
@@ -87,22 +90,22 @@ public class GridView extends Canvas {
                     disablePlacementMode();
                 } else if (drawMode == DrawMode.RECTANGLE) {
                     dragStartRow = row;
-                    dragStartCol = column;
+                    dragStartCol = col;
                     dragCurrentRow = row;
-                    dragCurrentCol = column;
+                    dragCurrentCol = col;
                     isDraggingRectangle = true;
                 } else if (drawMode == DrawMode.BRUSH) {
-                    setCellStateAndSync(row, column, INFECTED);
+                    setCellStateAndSync(row, col, INFECTED);
                     draw();
                 } else {
-                    if (cellClickListener != null && isInside(row, column)) {
-                        cellClickListener.onCellClicked(row, column);
+                    if (cellClickListener != null && isInside(row, col)) {
+                        cellClickListener.onCellClicked(row, col);
                         cellClickListener.onInteractionComplete();
                     }
                 }
             } else if (event.getButton() == MouseButton.SECONDARY) {
-                if (shelfPlacementListener != null && isInside(row, column) && cellType[row][column] != TYPE_WALL) {
-                    shelfPlacementListener.onShelfRemoved(row, column);
+                if (shelfPlacementListener != null && isInside(row, col) && cellType[row][col] != TYPE_WALL) {
+                    shelfPlacementListener.onShelfRemoved(row, col);
                 }
             }
         });
@@ -174,14 +177,6 @@ public class GridView extends Canvas {
         this.ghostHeight   = height;
     }
 
-    public void setNextShelfValue(moldsim.model.ShelfValue value) {
-        this.nextShelfValue = value;
-    }
-
-    public moldsim.model.ShelfValue getNextShelfValue() {
-        return nextShelfValue;
-    }
-
     public void disablePlacementMode() {
         this.placementMode = false;
         this.ghostRow = -1;
@@ -218,17 +213,7 @@ public class GridView extends Canvas {
     // ═════════════════════════════════════════════════════════════════════════
     //  Listeners
     // ═════════════════════════════════════════════════════════════════════════
-    
-    public void setSimulation(SimulationController simulation, Wall modelGrid) {
-        this.simulation = simulation;
-        this.modelGrid  = modelGrid;
-    }
 
-    public void setCellType(int row, int column, int type) {
-        if (isInside(row, column)) {
-            cellType[row][column] = type;
-        }
-    }
 
     public void setCellThicknessListener(CellClickListener listener) {}
 
@@ -402,23 +387,6 @@ public class GridView extends Canvas {
         gc.strokeRect(x, y, cellSize, cellSize);
     }
 
-    private boolean isInside(int row, int column) {
-        return row >= 0 && row < rows && column >= 0 && column < columns;
-    }
-
-    public int getRows() {
-        return rows;
-    }
-  
-    public int getColumns() {
-        return columns;
-    }
-
-    public interface CellClickListener {
-        void onCellClicked(int row, int column);
-        void onInteractionComplete(); 
-    }
-
     public int[][] copyGridState() {
         int[][] copy = new int[rows][columns];
         for (int r = 0; r < rows; r++)
@@ -450,12 +418,6 @@ public class GridView extends Canvas {
         }
         for (int r = 0; r < rows; r++) {
             cellType[r] = savedTypes[r].clone();
-    public void syncModelFromView() {
-        if (modelGrid == null) return;
-        for (int row = 0; row < rows; row++) {
-            for (int col = 0; col < columns; col++) {
-                syncModelCellFromView(row, col);
-            }
         }
         draw();
     }
@@ -541,7 +503,8 @@ public class GridView extends Canvas {
     // ═════════════════════════════════════════════════════════════════════════
 
     public interface CellClickListener {
-        void onCellClicked(int row, int col);
+        void onCellClicked(int row, int column);
+        void onInteractionComplete(); 
     }
 
     public interface ShelfPlacementListener {
