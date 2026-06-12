@@ -16,7 +16,9 @@ public class SimulationSnapshot {
     private final double temperature;
     private final double ventilation;
     private final WallMaterial material;
+    private final List<String> alertLogs;
 
+    public SimulationSnapshot(int week, int[][] cellStates, double humidity, double temperature, double ventilation, WallMaterial material, List<String> alertLogs) {
     public SimulationSnapshot(
             int week,
             List<int[][]> wallCellStates,
@@ -31,6 +33,7 @@ public class SimulationSnapshot {
         this.temperature = temperature;
         this.ventilation = ventilation;
         this.material = material;
+        this.alertLogs = alertLogs;
     }
 
     public int getWeek() {
@@ -65,6 +68,8 @@ public class SimulationSnapshot {
         return material;
     }
 
+    public List<String> getAlertLogs() {
+        return alertLogs;
     private static List<int[][]> deepCopyWallStates(List<int[][]> source) {
         List<int[][]> copy = new ArrayList<>();
 

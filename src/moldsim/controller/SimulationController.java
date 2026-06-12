@@ -1,6 +1,7 @@
 package moldsim.controller;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -13,6 +14,7 @@ public class SimulationController {
     private final AlertController alertController;
     private final Environment environment;
     private final Random random;
+    private final Map<Wall, List<Shelf>> shelvesByWall;
     private int currentWeek;
 
     public SimulationController(ArchiveRoom room, Map<Wall, List<Shelf>> shelvesByWall, Environment environment) {
@@ -22,20 +24,7 @@ public class SimulationController {
         this.alertController = new AlertController();
         this.currentWeek     = 0;
         this.random          = new Random();
-        initSensors(shelvesByWall);
-        alertController.setRecommendationEngine(new RecommendationEngine(room));
-    }
-
-    // Constructeur de compatibilité pour GridController (un seul mur)
-    public SimulationController(Wall wall, Environment environment) {
-        this.room = new ArchiveRoom("Archive", environment);
-        this.room.setNorthWall(wall);
-        this.environment     = environment;
-        this.sensors         = new ArrayList<>();
-        this.alertController = new AlertController();
-        this.currentWeek     = 0;
-        this.random          = new Random();
-        Map<Wall, List<Shelf>> shelvesByWall = Map.of(wall, List.of());
+        this.shelvesByWall = new HashMap<>(shelvesByWall);
         initSensors(shelvesByWall);
         alertController.setRecommendationEngine(new RecommendationEngine(room));
     }
@@ -51,17 +40,13 @@ public class SimulationController {
             shelvesByWall.getOrDefault(room.getWestWall(),  List.of())));
     }
 
-    public void tick() {
-        currentWeek++;
-        step();
-        pollSensors();
-    }
-
     // Appelé par GridView via stepSimulation()
     public void step() {
+        currentWeek++;
         for (MoldSensor sensor : sensors) {
             propagateOnWall(sensor.getWall());
         }
+        pollSensors();
     }
 
     private void propagateOnWall(Wall wall) {
@@ -125,7 +110,26 @@ public class SimulationController {
         }
     }
 
-    public int getCurrentWeek()                 { return currentWeek; }
-    public AlertController getAlertController() { return alertController; }
-    public List<SensorEvent> getHistory()       { return alertController.getHistory(); }
+    public int getCurrentWeek(){
+        return currentWeek;
+    }
+
+    public AlertController getAlertController() {
+        return alertController;
+    }
+
+    public List<SensorEvent> getHistory() {
+        return alertController.getHistory();
+    }
+
+    public void updateShelves(List<Shelf> shelves) {
+        shelvesByWall.put(room.getNorthWall(), shelves);
+        sensors.clear();
+        initSensors(shelvesByWall);
+    }
+
+    public void resetSensors() {
+        sensors.clear();
+        initSensors(shelvesByWall);
+    }
 }
