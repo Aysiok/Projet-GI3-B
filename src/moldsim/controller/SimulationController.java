@@ -29,6 +29,23 @@ public class SimulationController {
         alertController.setRecommendationEngine(new RecommendationEngine(room));
     }
 
+    public SimulationController(Wall wall, Environment environment) {
+        this.room = new ArchiveRoom("Archive", environment);
+        this.room.setNorthWall(wall);
+
+        this.environment = environment;
+        this.sensors = new ArrayList<>();
+        this.alertController = new AlertController();
+        this.currentWeek = 0;
+        this.random = new Random();
+
+        this.shelvesByWall = new HashMap<>();
+        this.shelvesByWall.put(wall, new ArrayList<>());
+
+        initSensors(this.shelvesByWall);
+        alertController.setRecommendationEngine(new RecommendationEngine(room));
+    }
+
     private void initSensors(Map<Wall, List<Shelf>> shelvesByWall) {
         if (room.getNorthWall() != null) sensors.add(new MoldSensor(room.getNorthWall(),
             shelvesByWall.getOrDefault(room.getNorthWall(), List.of())));

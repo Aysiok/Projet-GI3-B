@@ -8,6 +8,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import moldsim.view.WallConfigDialog;
 /**
  * Controller for the grid interface.
  * Connects MainView controls to GridView actions.
@@ -36,6 +38,7 @@ public class GridController {
     private static final int SNAPSHOT_HEALTHY  = 0;
     private static final int SNAPSHOT_INFECTED = 1;
     private static final int SNAPSHOT_DEAD     = 2;
+    private WallConfigDialog.WallConfig[] wallConfigs;
 
     public GridController(MainView mainView) {
         this.mainView = mainView;
@@ -49,26 +52,21 @@ public class GridController {
         this.updatingControls = false;
     }
 
+    public GridController(MainView mainView, WallConfigDialog.WallConfig[] configs) {
+        this(mainView);
+        this.wallConfigs = configs;
+    }
+
     public GridController(MainView mainView, Wall northWall) {
     this(mainView);
     this.modelGrid = northWall;
     }
     
     public void initialize() {
-        modelGrid   = new Wall(gridView.getColumns(), gridView.getRows());
+        if (modelGrid == null) {
+            modelGrid = new Wall(gridView.getColumns(), gridView.getRows());
+       }
         environment = new Environment();
-        environment.setHumidity(mainView.getHumiditySlider().getValue());
-        environment.setTemperature(mainView.getTemperatureSlider().getValue());
-        environment.setVentilation(mainView.getVentilationSlider().getValue());
-        
-        ArchiveRoom room = new ArchiveRoom("Archive", environment);
-        room.setNorthWall(modelGrid);
-        Map<Wall, List<Shelf>> shelvesByWall = new HashMap<>();
-        shelvesByWall.put(modelGrid, shelves);
-        simulation = new SimulationController(room, shelvesByWall, environment);
-
-        gridView.setSimulation(simulation, modelGrid);
-        environment = new moldsim.model.Environment();
         environment.setHumidity(mainView.getHumiditySlider().getValue());
         environment.setTemperature(mainView.getTemperatureSlider().getValue());
         environment.setVentilation(mainView.getVentilationSlider().getValue());
@@ -391,7 +389,8 @@ public class GridController {
         statsList.add(stats);
 
         String filePath = "report_" + System.currentTimeMillis() + ".pdf";
-        moldsim.model.PdfExporter.export(statsList, environment, filePath);
+        java.util.List<java.util.List<String>> allLogs = new java.util.ArrayList<>();
+        moldsim.model.PdfExporter.export(statsList, environment, allLogs, filePath);
         mainView.getStatusLabel().setText("PDF exported: " + filePath);
 
         try {
@@ -561,42 +560,30 @@ public class GridController {
     }
     
 
-}
+
     private void createDefaultWalls() {
-        int width = gridView.getColumns(); //à remplacer par la taille choisi lors du lancement 
-        int height = gridView.getRows(); // à remplacer par la taille choisi lors du lancement
+        if (wallConfigs == null) {
+            WallMaterial mat = toWallMaterial(mainView.getMaterialComboBox().getValue());
+            wallConfigs = new WallConfigDialog.WallConfig[] {
+                new WallConfigDialog.WallConfig(mat, gridView.getColumns(), gridView.getRows()),
+                new WallConfigDialog.WallConfig(mat, gridView.getColumns(), gridView.getRows()),
+                new WallConfigDialog.WallConfig(mat, gridView.getColumns(), gridView.getRows()),
+                new WallConfigDialog.WallConfig(mat, gridView.getColumns(), gridView.getRows())
+            };
+        } 
 
-        WallMaterial defaultMaterial = toWallMaterial(mainView.getMaterialComboBox().getValue());
+        addConfiguredWall("North Wall", wallConfigs[0]);
+        addConfiguredWall("East Wall",  wallConfigs[2]);
+        addConfiguredWall("South Wall", wallConfigs[1]);
+        addConfiguredWall("West Wall",  wallConfigs[3]);
+    }
 
+    private void addConfiguredWall(String name, WallConfigDialog.WallConfig config) {
         wallManager.addWall(new WallContext(
-            "North Wall",
-            width,
-            height,
-            defaultMaterial,
-            environment
-        ));
-
-        wallManager.addWall(new WallContext(
-            "East Wall",
-            width,
-            height,
-            defaultMaterial,
-            environment
-        ));
-
-        wallManager.addWall(new WallContext(
-            "South Wall",
-            width,
-            height,
-            defaultMaterial,
-            environment
-        ));
-
-        wallManager.addWall(new WallContext(
-            "West Wall",
-            width,
-            height,
-            defaultMaterial,
+            name,
+            config.width,
+            config.height,
+            config.material,
             environment
         ));
     }
@@ -608,6 +595,7 @@ public class GridController {
         shelves = current.getShelves();
         simulation = current.getSimulationController();
 
+        gridView.resizeGrid(modelGrid.getHeight(), modelGrid.getWidth());
         gridView.setSimulation(simulation, modelGrid);
 
         gridView.clearStructure();
@@ -618,6 +606,10 @@ public class GridController {
 
         locationContext.setWallName(current.getName());
         mainView.updateCurrentLocationLabel(locationContext.getDisplayName());
+
+        updatingControls = true;
+        mainView.getMaterialComboBox().setValue(toMaterialLabel(modelGrid.getMaterial()));
+        updatingControls = false;
 
         updateWallNavigationView();
     }

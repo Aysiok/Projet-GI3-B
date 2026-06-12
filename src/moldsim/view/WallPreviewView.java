@@ -21,12 +21,15 @@ public class WallPreviewView extends Canvas {
     }
 
     public void drawPreview(Wall wall, boolean showRightEdge) {
-        GraphicsContext gc = getGraphicsContext2D();
-        gc.clearRect(0, 0, getWidth(), getHeight());
-
         if (wall == null) {
             return;
         }
+
+        setWidth(previewColumns * cellSize);
+        setHeight(wall.getHeight() * cellSize);
+
+        GraphicsContext gc = getGraphicsContext2D();
+        gc.clearRect(0, 0, getWidth(), getHeight());
 
         int height = wall.getHeight();
         int width = wall.getWidth();

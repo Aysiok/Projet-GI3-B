@@ -16,11 +16,11 @@ public class GridView extends Canvas {
     private static final int INFECTED = 1;
     private static final int DEAD     = 2;
 
-    private final int rows;
-    private final int columns;
+    private int rows;
+    private int columns;
     private final double cellSize;
-    private final int[][] cells;
-    private final int[][] cellType; // 0=wall, 1=shelf, 2=document
+    private int[][] cells;
+    private int[][] cellType;// 0=wall, 1=shelf, 2=document
     private SimulationController simulation;
     private Wall modelGrid;
     private CellClickListener cellClickListener;
@@ -31,7 +31,7 @@ public class GridView extends Canvas {
     private int ghostHeight = 20;
     private ShelfPlacementListener shelfPlacementListener;
     private moldsim.model.ShelfValue nextShelfValue = moldsim.model.ShelfValue.MEDIUM;
-    private final moldsim.model.ShelfValue[][] cellValue;
+    private moldsim.model.ShelfValue[][] cellValue;
     public static final int TYPE_WALL     = 0;
     public static final int TYPE_SHELF    = 1;
     public static final int TYPE_DOCUMENT = 2;
@@ -359,6 +359,20 @@ public class GridView extends Canvas {
                 cellValue[row][col] = null;
             }
         }
+    }
+
+    public void resizeGrid(int newRows, int newColumns) {
+        this.rows = newRows;
+        this.columns = newColumns;
+
+        this.cells = new int[rows][columns];
+        this.cellType = new int[rows][columns];
+        this.cellValue = new moldsim.model.ShelfValue[rows][columns];
+
+        setWidth(columns * cellSize);
+        setHeight(rows * cellSize);
+
+        draw();
     }
 
 }

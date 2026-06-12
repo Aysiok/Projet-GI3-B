@@ -18,7 +18,6 @@ public class SimulationSnapshot {
     private final WallMaterial material;
     private final List<String> alertLogs;
 
-    public SimulationSnapshot(int week, int[][] cellStates, double humidity, double temperature, double ventilation, WallMaterial material, List<String> alertLogs) {
     public SimulationSnapshot(
             int week,
             List<int[][]> wallCellStates,
@@ -27,13 +26,25 @@ public class SimulationSnapshot {
             double ventilation,
             WallMaterial material
     ) {
+        this(week, wallCellStates, humidity, temperature, ventilation, material, new ArrayList<>());
+    }
+
+    public SimulationSnapshot(
+            int week,
+            List<int[][]> wallCellStates,
+            double humidity,
+            double temperature,
+            double ventilation,
+            WallMaterial material,
+            List<String> alertLogs
+    ) {
         this.week = week;
         this.wallCellStates = deepCopyWallStates(wallCellStates);
         this.humidity = humidity;
         this.temperature = temperature;
         this.ventilation = ventilation;
         this.material = material;
-        this.alertLogs = alertLogs;
+        this.alertLogs = new ArrayList<>(alertLogs);
     }
 
     public int getWeek() {
@@ -44,7 +55,6 @@ public class SimulationSnapshot {
         return deepCopyWallStates(wallCellStates);
     }
 
-    // Ancienne méthode gardée au cas où du vieux code l'utilise encore.
     public int[][] getCellStates() {
         if (wallCellStates.isEmpty()) {
             return null;
@@ -69,7 +79,9 @@ public class SimulationSnapshot {
     }
 
     public List<String> getAlertLogs() {
-        return alertLogs;
+        return new ArrayList<>(alertLogs);
+    }
+
     private static List<int[][]> deepCopyWallStates(List<int[][]> source) {
         List<int[][]> copy = new ArrayList<>();
 
@@ -89,6 +101,7 @@ public class SimulationSnapshot {
 
         for (int row = 0; row < source.length; row++) {
             copy[row] = new int[source[row].length];
+
             for (int col = 0; col < source[row].length; col++) {
                 copy[row][col] = source[row][col];
             }
