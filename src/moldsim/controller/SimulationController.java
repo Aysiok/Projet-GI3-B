@@ -21,6 +21,9 @@ public class SimulationController {
     private static final double BASE_INTERNAL_SPORE_DEPOSITION = 0.004; //dépôt de spores dû aux moisissures sporulantes déjà présentes
     private static final double BASE_SPORE_GERMINATION = 0.05; //probabilité qu’une spore déposée germe
     private static final double SPORULATION_THRESHOLD = 10.0; //niveau de moisissure à partir duquel une cellule devient sporulante
+    private static final int MIN_ACTIVE_MOLD_AGE_BEFORE_DEATH = 52; //52 semaines : avant ça, une cellule infectée ne meurt normalement pas.
+    private static final double BASE_MOLD_DEATH_PROBABILITY = 0.04; //24 semaines : avant ça, une cellule infectée ne meurt normalement pas.
+    private static final double CRITICAL_MOLD_LEVEL = 90.0; //90.0 : si le niveau de moisissure est très haut, la mort devient plus probable.
 
     public SimulationController(ArchiveRoom room, Map<Wall, List<Shelf>> shelvesByWall, Environment environment) {
         this.room            = room;
@@ -72,6 +75,7 @@ public class SimulationController {
             updateDepositedSpores(wall);          // DEPOSITED_SPORE → INFECTED ou HEALTHY
             propagateOnWall(wall);                // INFECTED / SPORULATING → voisins
             matureInfectedCells(wall);            // INFECTED → SPORULATING
+            killOldMoldCells(wall);
         }
 
         pollSensors();
@@ -93,6 +97,7 @@ public class SimulationController {
                             cellsToInfect.add(neighbor);
                     }
                 }
+                cell.incrementAge();
                 double growth = cell.getSpecies().getMoldGrowthPerStep();
                 if (environment.getHumidity() > 80) growth *= 1.5;
                 cell.setMoldLevel(cell.getMoldLevel() + growth);
@@ -327,6 +332,52 @@ public class SimulationController {
                     cell.setSpecies(null);
                     cell.setMoldLevel(0.0);
                     cell.setAge(0);
+                }
+            }
+        }
+    }
+
+    private void killOldMoldCells(Wall wall) {
+        for (Cell[] row : wall.getGrid()) {
+            for (Cell cell : row) {
+                if (!isActiveMold(cell)) {
+                    continue;
+                }
+
+                if (cell.getAge() < MIN_ACTIVE_MOLD_AGE_BEFORE_DEATH
+                        && cell.getMoldLevel() < CRITICAL_MOLD_LEVEL) {
+                    continue;
+                }
+
+                double ageFactor = 0.0;
+
+                if (cell.getAge() >= MIN_ACTIVE_MOLD_AGE_BEFORE_DEATH) {
+                    ageFactor = (cell.getAge() - MIN_ACTIVE_MOLD_AGE_BEFORE_DEATH) / 20.0;
+                }
+
+                double moldLevelFactor = 0.0;
+
+                if (cell.getMoldLevel() >= CRITICAL_MOLD_LEVEL) {
+                    moldLevelFactor = (cell.getMoldLevel() - CRITICAL_MOLD_LEVEL)
+                            / (100.0 - CRITICAL_MOLD_LEVEL);
+                }
+
+                double dryEnvironmentFactor = 0.0;
+
+                if (environment.getHumidity() < 50.0) {
+                    dryEnvironmentFactor = 0.08;
+                }
+
+                double deathProbability =
+                        BASE_MOLD_DEATH_PROBABILITY
+                        + 0.08 * ageFactor
+                        + 0.10 * moldLevelFactor
+                        + dryEnvironmentFactor;
+
+                deathProbability = Math.max(0.0, Math.min(1.0, deathProbability));
+
+                if (random.nextDouble() < deathProbability) {
+                    cell.kill();
                 }
             }
         }
