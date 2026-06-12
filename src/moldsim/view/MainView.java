@@ -31,6 +31,8 @@ public class MainView extends BorderPane {
     private Button previousStepButton;
     private Slider timeSlider;
     private Button newShelfButton;
+    private Button saveButton;
+    private Button loadButton;
     
 
     // ── Status bar ────────────────────────────────────────────
@@ -62,6 +64,10 @@ public class MainView extends BorderPane {
     // ── Top bar ───────────────────────────────────────────────
     private HBox buildTopBar() {
         HBox topBar = new HBox(12);
+        saveButton = new Button("💾 Save");
+        saveButton.setStyle("-fx-background-color: #4A6FA5; -fx-text-fill: white;");
+        loadButton = new Button("📂 Load");
+        loadButton.setStyle("-fx-background-color: #4A6FA5; -fx-text-fill: white;");
         topBar.setPadding(new Insets(10, 16, 10, 16));
         topBar.setStyle("-fx-background-color: #2C2C2C;");
 
@@ -88,7 +94,9 @@ public class MainView extends BorderPane {
             currentLocationLabel,
             roomNameField,
             wallNameField,
-            applyLocationButton
+            applyLocationButton,
+            saveButton,
+            loadButton
         );
 
         return topBar;
@@ -297,6 +305,13 @@ public class MainView extends BorderPane {
     }
     public Button getNewShelfButton() { 
         return newShelfButton;
+    }
+
+    public Button getSaveButton() { 
+        return saveButton;
+    }
+    public Button getLoadButton() { 
+        return loadButton; 
     }
 
     

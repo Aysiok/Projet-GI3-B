@@ -331,5 +331,19 @@ public class GridView extends Canvas {
     public interface ShelfPlacementListener {
         void onShelfPlaced(int row, int col, int width, int height);
         void onShelfRemoved(int row, int col); // ← ajoute ça
-}
+    }
+    public int[][] copyCellTypes() {
+        int[][] copy = new int[rows][columns];
+        for (int r = 0; r < rows; r++)
+            for (int c = 0; c < columns; c++)
+                copy[r][c] = cellType[r][c];
+        return copy;
+    }
+
+    public void restoreCellTypes(int[][] savedTypes) {
+        if (savedTypes == null) return;
+        for (int r = 0; r < rows; r++)
+            for (int c = 0; c < columns; c++)
+                cellType[r][c] = savedTypes[r][c];
+    }
 }

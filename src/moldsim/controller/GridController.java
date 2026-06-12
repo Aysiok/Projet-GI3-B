@@ -93,6 +93,8 @@ public class GridController {
         mainView.getResetButton().setOnAction(event -> reset());
         mainView.getNewShelfButton().setOnAction(event -> openNewShelfDialog());
         mainView.getExportPdfButton().setOnAction(event -> exportPdf());
+        mainView.getSaveButton().setOnAction(event -> saveSimulation());
+        mainView.getLoadButton().setOnAction(event -> loadSimulation());
 
         gridView.setShelfPlacementListener(new GridView.ShelfPlacementListener() {
         @Override
@@ -321,6 +323,10 @@ public class GridController {
     }
 
     private void exportPdf() {
+        if (history.isEmpty()) {
+            mainView.getStatusLabel().setText("No simulation data to export.");
+            return;
+        }
         List<moldsim.model.Statistics> statsList = new ArrayList<>();
         List<java.util.List<String>> allLogs = new ArrayList<>();
         int previousInfected = 0;
@@ -488,4 +494,64 @@ public class GridController {
         }
     }
 
+    private void saveSimulation() {
+        int[][] cellStates = gridView.copyGridState();
+        int[][] cellTypes  = gridView.copyCellTypes(); 
+        
+        SimulationState state = new SimulationState(cellStates, cellTypes, shelves, environment, currentStepIndex, history);
+        
+        // Choix du fichier
+        javafx.stage.FileChooser chooser = new javafx.stage.FileChooser();
+        chooser.setTitle("Save Simulation");
+        chooser.getExtensionFilters().add(
+            new javafx.stage.FileChooser.ExtensionFilter("Simulation files", "*.sim"));
+        java.io.File file = chooser.showSaveDialog(mainView.getScene().getWindow());
+        
+        if (file != null) {
+            BinaryExporter.save(state, file.getAbsolutePath());
+            mainView.getStatusLabel().setText("Saved: " + file.getName());
+        }
+    }
+
+   private void loadSimulation() {
+        javafx.stage.FileChooser chooser = new javafx.stage.FileChooser();
+        chooser.setTitle("Load Simulation");
+        chooser.getExtensionFilters().add(
+            new javafx.stage.FileChooser.ExtensionFilter("Simulation files", "*.sim"));
+        java.io.File file = chooser.showOpenDialog(mainView.getScene().getWindow());
+        
+        if (file != null) {
+            SimulationState state = BinaryExporter.load(file.getAbsolutePath());
+            if (state != null) {
+                // Restaure l'environnement
+                environment.setHumidity(state.getHumidity());
+                environment.setTemperature(state.getTemperature());
+                environment.setVentilation(state.getVentilation());
+                mainView.getHumiditySlider().setValue(state.getHumidity());
+                mainView.getTemperatureSlider().setValue(state.getTemperature());
+                mainView.getVentilationSlider().setValue(state.getVentilation());
+
+                // Restaure les étagères
+                shelves.clear();
+                shelves.addAll(state.getShelves());
+
+                // Restaure la grille
+                gridView.restoreGridState(state.getCellStates());
+                gridView.restoreCellTypes(state.getCellTypes());
+                markShelvesOnGrid();
+                gridView.draw();
+
+                // Restaure l'historique
+                history.clear();
+                history.addAll(state.getHistory());
+                currentStepIndex = state.getStep();
+                simulation.setCurrentWeek(currentStepIndex);
+
+                updateTimeDisplay();
+                updateTimeSlider();
+                updateStatistics();
+                mainView.getStatusLabel().setText("Loaded: " + file.getName());
+            }
+        }
+    }
 }
