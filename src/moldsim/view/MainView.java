@@ -24,6 +24,8 @@ public class MainView extends BorderPane {
     private Button previousStepButton;
     private Slider timeSlider;
     private Button newShelfButton;
+    private Button saveButton;
+    private Button loadButton;
     
     private ComboBox<String> drawToolComboBox;
 
@@ -50,6 +52,10 @@ public class MainView extends BorderPane {
 
     private HBox buildTopBar() {
         HBox topBar = new HBox(12);
+        saveButton = new Button("💾 Save");
+        saveButton.setStyle("-fx-background-color: #4A6FA5; -fx-text-fill: white;");
+        loadButton = new Button("📂 Load");
+        loadButton.setStyle("-fx-background-color: #4A6FA5; -fx-text-fill: white;");
         topBar.setPadding(new Insets(10, 16, 10, 16));
         topBar.setStyle("-fx-background-color: #2C2C2C;");
 
@@ -70,7 +76,8 @@ public class MainView extends BorderPane {
 
         applyLocationButton = new Button("Apply");
 
-        topBar.getChildren().addAll(title, version, currentLocationLabel, roomNameField, wallNameField, applyLocationButton);
+        topBar.getChildren().addAll(title, version, currentLocationLabel, roomNameField, wallNameField, applyLocationButton, saveButton, loadButton);
+
         return topBar;
     }
 
@@ -217,14 +224,53 @@ public class MainView extends BorderPane {
     public Label getInfectedLabel()        { return infectedLabel; }
     public Label getRiskLabel()            { return riskLabel; }
     public GridView getGridView()          { return gridView; }
-    public Label getCurrentLocationLabel() { return currentLocationLabel; }
-    public TextField getRoomNameField()    { return roomNameField; }
-    public TextField getWallNameField()    { return wallNameField; }
-    public Button getApplyLocationButton() { return applyLocationButton; }
-    public void updateCurrentLocationLabel(String locationText) { currentLocationLabel.setText("Current view: " + locationText); }
-    public Label getWeekLabel()            { return weekLabel; }   
-    public Label getStepLabel()            { return stepLabel; }
-    public Button getPreviousStepButton()  { return previousStepButton; }
-    public Slider getTimeSlider()          { return timeSlider; }
-    public Button getNewShelfButton()      { return newShelfButton; }
+
+    public Label getCurrentLocationLabel() {
+    return currentLocationLabel;
+    }
+
+    public TextField getRoomNameField() {
+        return roomNameField;
+    }
+
+    public TextField getWallNameField() {
+        return wallNameField;
+    }
+
+    public Button getApplyLocationButton() {
+        return applyLocationButton;
+    }
+
+    public void updateCurrentLocationLabel(String locationText) {
+        currentLocationLabel.setText("Current view: " + locationText);
+    }
+
+    public Label getWeekLabel() {
+    return weekLabel;
+    }   
+
+    public Label getStepLabel() {
+        return stepLabel;
+    }
+
+    public Button getPreviousStepButton() {
+        return previousStepButton;
+    }
+
+    public Slider getTimeSlider() {
+        return timeSlider;
+    }
+    public Button getNewShelfButton() { 
+        return newShelfButton;
+    }
+
+    public Button getSaveButton() { 
+        return saveButton;
+    }
+    public Button getLoadButton() { 
+        return loadButton; 
+    }
+
+    
+
 }
