@@ -309,13 +309,25 @@ public class GridController {
         }
     }
     private void updateLocationFromInput() {
-        String roomName = mainView.getRoomNameField().getText();
-        String wallName = mainView.getWallNameField().getText();
+        String roomName = mainView.getRoomNameField().getText().trim();
+        String wallName = mainView.getWallNameField().getText().trim();
+
+        if (roomName.isEmpty()) {
+            roomName = "Archive Room A";
+        }
+
+        if (wallName.isEmpty()) {
+            wallName = wallManager.getCurrentWallContext().getName();
+        }
+
+        WallContext current = wallManager.getCurrentWallContext();
 
         locationContext.setRoomName(roomName);
         locationContext.setWallName(wallName);
 
-        mainView.updateCurrentLocationLabel(locationContext.getDisplayName());
+        current.setName(wallName);
+
+        refreshCurrentLocationDisplay();
 
         mainView.getStatusLabel().setText(
             "Current location changed to " + locationContext.getDisplayName() + "."
@@ -604,14 +616,11 @@ public class GridController {
         markShelvesOnGrid();
         gridView.draw();
 
-        locationContext.setWallName(current.getName());
-        mainView.updateCurrentLocationLabel(locationContext.getDisplayName());
-
         updatingControls = true;
         mainView.getMaterialComboBox().setValue(toMaterialLabel(modelGrid.getMaterial()));
         updatingControls = false;
 
-        updateWallNavigationView();
+        refreshCurrentLocationDisplay();
     }
 
     private void updateWallNavigationView() {
@@ -861,4 +870,16 @@ public class GridController {
             }
         }
     }
+
+    private void refreshCurrentLocationDisplay() {
+        WallContext current = wallManager.getCurrentWallContext();
+
+        locationContext.setWallName(current.getName());
+
+        mainView.getWallNameField().setText(current.getName());
+        mainView.updateCurrentLocationLabel(locationContext.getDisplayName());
+
+        updateWallNavigationView();
+    }
+
 }

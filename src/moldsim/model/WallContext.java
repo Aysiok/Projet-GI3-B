@@ -2,12 +2,11 @@ package moldsim.model;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import moldsim.controller.SimulationController;
 
 public class WallContext {
 
-    private final String name;
+    private String name;
     private final Wall wall;
     private final List<Shelf> shelves;
     private final SimulationController simulationController;
@@ -17,6 +16,7 @@ public class WallContext {
         this.wall = new Wall(width, height, material);
         this.shelves = new ArrayList<>();
         this.simulationController = new SimulationController(wall, environment);
+        this.simulationController.setDisplayName(name);
     }
 
     public String getName() {
@@ -33,5 +33,10 @@ public class WallContext {
 
     public SimulationController getSimulationController() {
         return simulationController;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+        this.simulationController.setDisplayName(name);
     }
 }

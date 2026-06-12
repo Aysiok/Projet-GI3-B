@@ -149,4 +149,8 @@ public class SimulationController {
         sensors.clear();
         initSensors(shelvesByWall);
     }
+
+    public void setDisplayName(String displayName) {
+        alertController.setContextName(displayName);
+    }
 }
