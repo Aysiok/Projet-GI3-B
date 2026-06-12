@@ -15,6 +15,8 @@ public class GridView extends Canvas {
     private static final int HEALTHY  = 0;
     private static final int INFECTED = 1;
     private static final int DEAD     = 2;
+    private static final int DEPOSITED_SPORE = 3;
+    private static final int SPORULATING = 4;
 
     private int rows;
     private int columns;
@@ -154,9 +156,16 @@ public class GridView extends Canvas {
 
     public int countInfectedCells() {
         int count = 0;
-        for (int row = 0; row < rows; row++)
-            for (int column = 0; column < columns; column++)
-                if (cells[row][column] == INFECTED) count++;
+
+        for (int row = 0; row < rows; row++) {
+            for (int column = 0; column < columns; column++) {
+                if (cells[row][column] == INFECTED
+                        || cells[row][column] == SPORULATING) {
+                    count++;
+                }
+            }
+        }
+
         return count;
     }
 
@@ -193,20 +202,36 @@ public class GridView extends Canvas {
         int type  = cellType[row][column];
         int state = cells[row][column];
 
-        if (state == INFECTED) {
+        if (state == DEPOSITED_SPORE) {
+            // Spore déposée : pas encore une vraie moisissure visible
+            gc.setFill(Color.rgb(180, 160, 60));
+
+        } else if (state == SPORULATING) {
+            // Moisissure mature / fleurie : très active
             if (type == TYPE_DOCUMENT) {
-                gc.setFill(Color.rgb(120, 206, 140));   // vert vif sur document
+                gc.setFill(Color.rgb(160, 230, 120));
             } else if (type == TYPE_SHELF) {
-                gc.setFill(Color.rgb(20, 100, 30));   // vert foncé sur bois
+                gc.setFill(Color.rgb(60, 150, 50));
             } else {
-                gc.setFill(Color.rgb(40, 130, 60));   // vert normal sur mur
+                gc.setFill(Color.rgb(90, 180, 90));
             }
+
+        } else if (state == INFECTED) {
+            if (type == TYPE_DOCUMENT) {
+                gc.setFill(Color.rgb(120, 206, 140));
+            } else if (type == TYPE_SHELF) {
+                gc.setFill(Color.rgb(20, 100, 30));
+            } else {
+                gc.setFill(Color.rgb(40, 130, 60));
+            }
+
         } else if (state == DEAD) {
             gc.setFill(Color.rgb(70, 70, 70));
+
         } else {
-    // Sain — couleur selon le type
             if (type == TYPE_DOCUMENT) {
                 moldsim.model.ShelfValue val = cellValue[row][column];
+
                 if (val == null) {
                     gc.setFill(Color.rgb(255, 248, 220));
                 } else {
@@ -217,13 +242,14 @@ public class GridView extends Canvas {
                         case CRITICAL -> Color.rgb(220, 80, 80);
                     });
                 }
+
             } else if (type == TYPE_SHELF) {
-                gc.setFill(Color.rgb(101, 67, 33));   // marron bois
+                gc.setFill(Color.rgb(101, 67, 33));
+
             } else {
-                gc.setFill(Color.rgb(105, 240, 255)); // beige mur
+                gc.setFill(Color.rgb(105, 240, 255));
             }
         }
-    
 
         gc.fillRect(x, y, cellSize, cellSize);
         gc.setStroke(Color.rgb(50, 50, 50));
@@ -297,10 +323,26 @@ public class GridView extends Canvas {
         int type = cellType[row][col];
 
         // Synchronisation de l'état biologique
-        if (state == INFECTED) {
+        if (state == DEPOSITED_SPORE) {
+            cell.setState(moldsim.model.CellState.DEPOSITED_SPORE);
+            cell.setSpecies(moldsim.model.MoldSpecies.CLADOSPORIUM);
+            cell.setMoldLevel(0.0);
+            cell.setAge(0);
+
+        } else if (state == SPORULATING) {
+            cell.setState(moldsim.model.CellState.SPORULATING);
+            cell.setSpecies(moldsim.model.MoldSpecies.CLADOSPORIUM);
+
+            if (cell.getMoldLevel() < 1.0) {
+                cell.setMoldLevel(1.0);
+            }
+
+        } else if (state == INFECTED) {
             cell.infect(moldsim.model.MoldSpecies.CLADOSPORIUM);
+
         } else if (state == DEAD) {
             cell.kill();
+
         } else {
             cell.setState(moldsim.model.CellState.HEALTHY);
             cell.setSpecies(null);
@@ -336,12 +378,22 @@ public class GridView extends Canvas {
                 }
 
                 switch (cell.getState()) {
+                    case DEPOSITED_SPORE:
+                        cells[row][col] = DEPOSITED_SPORE;
+                        break;
+
                     case INFECTED:
                         cells[row][col] = INFECTED;
                         break;
+
+                    case SPORULATING:
+                        cells[row][col] = SPORULATING;
+                        break;
+
                     case DEAD:
                         cells[row][col] = DEAD;
                         break;
+
                     default:
                         cells[row][col] = HEALTHY;
                         break;

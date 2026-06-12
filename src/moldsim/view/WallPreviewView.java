@@ -48,10 +48,18 @@ public class WallPreviewView extends Canvas {
 
                 Cell cell = wall.getCell(realCol, row);
 
-                if (cell != null && cell.getState() == CellState.INFECTED) {
+                if (cell != null && cell.getState() == CellState.DEPOSITED_SPORE) {
+                    gc.setFill(Color.rgb(180, 160, 60));
+
+                } else if (cell != null && cell.getState() == CellState.SPORULATING) {
+                    gc.setFill(Color.rgb(90, 180, 90));
+
+                } else if (cell != null && cell.getState() == CellState.INFECTED) {
                     gc.setFill(Color.rgb(40, 130, 60));
+
                 } else if (cell != null && cell.getState() == CellState.DEAD) {
                     gc.setFill(Color.rgb(70, 70, 70));
+
                 } else {
                     gc.setFill(Color.rgb(190, 220, 225));
                 }

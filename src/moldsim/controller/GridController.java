@@ -32,12 +32,17 @@ public class GridController {
     private boolean updatingTimeSlider;
     private boolean updatingControls;
 
+    private static final double ROOM_EXTERNAL_SPORE_DEPOSITION = 0.00002;
+    private static final double ROOM_INTERNAL_SPORE_DEPOSITION = 0.004;
+
     // Play/Pause timer
     private javafx.animation.Timeline simulationTimer;
     private boolean isRunning = false;
     private static final int SNAPSHOT_HEALTHY  = 0;
     private static final int SNAPSHOT_INFECTED = 1;
     private static final int SNAPSHOT_DEAD     = 2;
+    private static final int SNAPSHOT_DEPOSITED_SPORE = 3;
+    private static final int SNAPSHOT_SPORULATING = 4;
     private WallConfigDialog.WallConfig[] wallConfigs;
 
     public GridController(MainView mainView) {
@@ -422,6 +427,8 @@ public class GridController {
             wallContext.getSimulationController().step();
         }
 
+        depositSporesAcrossRoom();
+
         propagateBetweenAdjacentWalls();
 
         gridView.updateViewFromModel();
@@ -786,8 +793,12 @@ public class GridController {
 
                 if (cell == null) {
                     state[row][col] = SNAPSHOT_HEALTHY;
+                } else if (cell.getState() == CellState.DEPOSITED_SPORE) {
+                    state[row][col] = SNAPSHOT_DEPOSITED_SPORE;
                 } else if (cell.getState() == CellState.INFECTED) {
                     state[row][col] = SNAPSHOT_INFECTED;
+                } else if (cell.getState() == CellState.SPORULATING) {
+                    state[row][col] = SNAPSHOT_SPORULATING;
                 } else if (cell.getState() == CellState.DEAD) {
                     state[row][col] = SNAPSHOT_DEAD;
                 } else {
@@ -832,7 +843,17 @@ public class GridController {
 
                 int state = savedState[row][col];
 
-                if (state == SNAPSHOT_INFECTED) {
+                if (state == SNAPSHOT_DEPOSITED_SPORE) {
+                    cell.setState(CellState.DEPOSITED_SPORE);
+                    cell.setSpecies(MoldSpecies.CLADOSPORIUM);
+                    cell.setMoldLevel(0.0);
+                    cell.setAge(0);
+
+                } else if (state == SNAPSHOT_SPORULATING) {
+                    cell.setState(CellState.SPORULATING);
+                    cell.setSpecies(MoldSpecies.CLADOSPORIUM);
+
+                } else if (state == SNAPSHOT_INFECTED) {
                     cell.setState(CellState.HEALTHY);
                     cell.setSpecies(null);
                     cell.setMoldLevel(0.0);
@@ -880,6 +901,116 @@ public class GridController {
         mainView.updateCurrentLocationLabel(locationContext.getDisplayName());
 
         updateWallNavigationView();
+    }
+
+    //Spore methods for room
+
+    private void depositSporesAcrossRoom() {
+        MoldSpecies species = MoldSpecies.CLADOSPORIUM;
+
+        int totalCells = 0;
+        int sporulatingCount = 0;
+
+        for (WallContext wallContext : wallManager.getWalls()) {
+            Wall wall = wallContext.getWall();
+
+            totalCells += wall.getWidth() * wall.getHeight();
+            sporulatingCount += countCellsByState(wall, CellState.SPORULATING);
+        }
+
+        if (totalCells <= 0) {
+            return;
+        }
+
+        double sporulatingRatio = (double) sporulatingCount / totalCells;
+        double sporePressure = 1.0 - Math.exp(-8.0 * sporulatingRatio);
+
+        double humidityFactor = computeHumiditySuitability(species);
+        double temperatureFactor = computeTemperatureSuitability(species);
+        double ventilationFactor = computeVentilationBlockingFactor();
+
+        double environmentalSuitability =
+                humidityFactor
+                * temperatureFactor
+                * ventilationFactor;
+
+        double probability =
+                environmentalSuitability
+                * (
+                    ROOM_EXTERNAL_SPORE_DEPOSITION
+                    + ROOM_INTERNAL_SPORE_DEPOSITION * sporePressure
+                );
+
+        for (WallContext wallContext : wallManager.getWalls()) {
+            depositSporesOnWall(wallContext.getWall(), species, probability);
+        }
+    }
+
+    private void depositSporesOnWall(Wall wall, MoldSpecies species, double probability) {
+        for (Cell[] row : wall.getGrid()) {
+            for (Cell cell : row) {
+                if (cell.getState() == CellState.HEALTHY) {
+                    if (Math.random() < probability) {
+                        cell.setState(CellState.DEPOSITED_SPORE);
+                        cell.setSpecies(species);
+                        cell.setMoldLevel(0.0);
+                        cell.setAge(0);
+                    }
+                }
+            }
+        }
+    }
+
+    private int countCellsByState(Wall wall, CellState state) {
+        int count = 0;
+
+        for (Cell[] row : wall.getGrid()) {
+            for (Cell cell : row) {
+                if (cell.getState() == state) {
+                    count++;
+                }
+            }
+        }
+
+        return count;
+    }
+
+    private double computeHumiditySuitability(MoldSpecies species) {
+        double humidity = environment.getHumidity();
+
+        if (humidity < species.getMinHumidity()) {
+            return 0.0;
+        }
+
+        double value = (humidity - species.getMinHumidity()) / (100.0 - species.getMinHumidity());
+        return Math.max(0.0, Math.min(1.0, value));
+    }
+
+    private double computeTemperatureSuitability(MoldSpecies species) {
+        double temperature = environment.getTemperature();
+
+        if (temperature < species.getMinTemperature()
+                || temperature > species.getMaxTemperature()) {
+            return 0.0;
+        }
+
+        double tempMid = (species.getMinTemperature() + species.getMaxTemperature()) / 2.0;
+        double tempRange = tempMid - species.getMinTemperature();
+
+        if (tempRange <= 0.0) {
+            return 0.0;
+        }
+
+        double value = 1.0 - Math.abs(temperature - tempMid) / tempRange;
+        return Math.max(0.0, Math.min(1.0, value));
+    }
+
+    private double computeVentilationBlockingFactor() {
+        double ventilation = environment.getVentilation();
+
+        double factor = 1.0 - ventilation / 100.0;
+
+        return Math.max(0.0, Math.min(1.0, factor));
     }
 
 }
