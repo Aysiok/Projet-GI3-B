@@ -611,6 +611,26 @@ public class GridController {
         history.add(createSnapshot(nextWeek));
         currentStepIndex = history.size() - 1;
         updateStatistics();
+        int week = currentStepIndex;
+        simulation.getAlertController().getHistory().stream()
+        .filter(e -> e.getWeek() == week)
+        .forEach(e -> {
+            String msg = "Week " + e.getWeek() + " — [" + e.getType() + "] "
+                + e.getAlertLevel()
+                + (e.getShelf() != null
+                    ? " — shelf " + e.getShelf().getId()
+                    : String.format(" — rate %.0f%%", e.getMoldRate() * 100));
+            javafx.application.Platform.runLater(() ->
+                mainView.getAlertLogView().getItems().add(0, msg));
+
+            // Recommandations
+            if (simulation.getAlertController().getRecommendationEngine() != null) {
+                simulation.getAlertController().getRecommendationEngine()
+                    .analyze(e)
+                    .forEach(r -> javafx.application.Platform.runLater(() ->
+                        mainView.getAlertLogView().getItems().add(0, "  → " + r)));
+            }
+        });
         updateTimeDisplay();
         updateTimeSlider();
         updateWallNavigationView();
