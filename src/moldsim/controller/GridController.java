@@ -169,9 +169,11 @@ public class GridController {
         gridView.setShelfPlacementListener(new GridView.ShelfPlacementListener() {
             @Override
             public void onShelfPlaced(int row, int col, int width, int height) {
+                int forcedRow = gridView.getRows() - height;
+                int clampedCol = Math.max(0, Math.min(col, gridView.getColumns() - width));
                 String id = "S" + (shelves.size() + 1);
-                int planks = Math.max(1, height / 10);
-                Shelf shelf = new Shelf(id, col, row, width, height, planks, gridView.getNextShelfValue());
+                int planks = Math.max(1, height / 5);
+                Shelf shelf = new Shelf(id, clampedCol, forcedRow, width, height, planks, gridView.getNextShelfValue());
                 shelves.add(shelf);
                 simulation.updateShelves(shelves);
                 markShelvesOnGrid();
@@ -283,6 +285,15 @@ public class GridController {
 
             double plankSpacing = (double) h / (planks + 1);
 
+            // Ligne tout en haut de l'étagère
+            for (int col = startX; col < startX + w; col++) {
+                gridView.setCellType(startY, col, GridView.TYPE_DOCUMENT);
+                gridView.setCellValue(startY, col, shelf.getValue());
+                Cell cell = modelGrid.getCell(col, startY);
+                if (cell != null) cell.setWallMaterial(WallMaterial.DOCUMENT);
+            }
+
+            // Planches = bois
             for (int p = 0; p < planks; p++) {
                 int plankRow = startY + (int) ((p + 1) * plankSpacing);
 
@@ -296,6 +307,7 @@ public class GridController {
                 }
             }
 
+            // Espaces entre planches = documents
             for (int p = 0; p < planks; p++) {
                 int plankRow = startY + (int) ((p + 1) * plankSpacing);
                 int prevPlankRow = p == 0
@@ -312,6 +324,17 @@ public class GridController {
                             cell.setWallMaterial(WallMaterial.DOCUMENT);
                         }
                     }
+                }
+            }
+
+            // Zone après la dernière planche jusqu'en bas
+            int lastPlankRow = startY + (int) (planks * plankSpacing);
+            for (int row = lastPlankRow + 1; row < startY + h; row++) {
+                for (int col = startX; col < startX + w; col++) {
+                    gridView.setCellType(row, col, GridView.TYPE_DOCUMENT);
+                    gridView.setCellValue(row, col, shelf.getValue());
+                    Cell cell = modelGrid.getCell(col, row);
+                    if (cell != null) cell.setWallMaterial(WallMaterial.DOCUMENT);
                 }
             }
         }

@@ -220,14 +220,12 @@ public class GridView extends Canvas {
     public void setCellType(int row, int col, int type) {
         if (isInside(row, col)) {
             cellType[row][col] = type;
-            draw();
         }
     }
 
     public void setCellValue(int row, int col, ShelfValue value) {
         if (isInside(row, col)) {
             cellValue[row][col] = value;
-            draw();
         }
     }
 
@@ -339,18 +337,29 @@ public class GridView extends Canvas {
         }
 
         if (placementMode && ghostRow >= 0 && ghostCol >= 0) {
-            int clampedCol = Math.max(0, Math.min(ghostCol, columns - ghostWidth));
-            int clampedRow = Math.max(0, Math.min(ghostRow, rows - ghostHeight));
-            double gx = clampedCol * cellSize;
-            double gy = clampedRow * cellSize;
-            double gw = ghostWidth * cellSize;
-            double gh = ghostHeight * cellSize;
-            gc.setFill(Color.rgb(122, 98, 72, 0.4));
-            gc.fillRect(gx, gy, gw, gh);
-            gc.setStroke(Color.rgb(122, 98, 72, 0.9));
-            gc.setLineWidth(2);
-            gc.strokeRect(gx, gy, gw, gh);
+        int clampedCol = Math.max(0, Math.min(ghostCol, columns - ghostWidth));
+        int clampedRow = rows - ghostHeight; // gravité
+
+        int planks = Math.max(1, ghostHeight / 5);
+        double plankSpacing = (double) ghostHeight / (planks + 1);
+
+        // Fond de l'étagère transparent
+        gc.setFill(Color.rgb(101, 67, 33, 0.2));
+        gc.fillRect(clampedCol * cellSize, clampedRow * cellSize,
+                    ghostWidth * cellSize, ghostHeight * cellSize);
+        gc.setStroke(Color.rgb(101, 67, 33, 0.8));
+        gc.setLineWidth(1.5);
+        gc.strokeRect(clampedCol * cellSize, clampedRow * cellSize,
+                    ghostWidth * cellSize, ghostHeight * cellSize);
+
+        // Planches
+        for (int p = 0; p < planks; p++) {
+            int plankRow = clampedRow + (int) ((p + 1) * plankSpacing);
+            gc.setFill(Color.rgb(101, 67, 33, 0.6));
+            gc.fillRect(clampedCol * cellSize, plankRow * cellSize,
+                        ghostWidth * cellSize, cellSize);
         }
+    }
 
         // Prévisualisation Rectangle de dessin
         if (drawMode == DrawMode.RECTANGLE && isDraggingRectangle) {
