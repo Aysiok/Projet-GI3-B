@@ -21,8 +21,8 @@ public class SimulationController {
     private static final double BASE_INTERNAL_SPORE_DEPOSITION = 0.004; //dépôt de spores dû aux moisissures sporulantes déjà présentes
     private static final double BASE_SPORE_GERMINATION = 0.05; //probabilité qu’une spore déposée germe
     private static final double SPORULATION_THRESHOLD = 10.0; //niveau de moisissure à partir duquel une cellule devient sporulante
-    private static final int MIN_ACTIVE_MOLD_AGE_BEFORE_DEATH = 52; //52 semaines : avant ça, une cellule infectée ne meurt normalement pas.
-    private static final double BASE_MOLD_DEATH_PROBABILITY = 0.04; //24 semaines : avant ça, une cellule infectée ne meurt normalement pas.
+    private static final int MIN_ACTIVE_MOLD_AGE_BEFORE_DEATH = 104; //104 semaines (2 ans) : avant ça, une cellule infectée ne meurt normalement pas.
+    private static final double BASE_MOLD_DEATH_PROBABILITY = 0.04; //4% : probabilité de mort par semaine après ce seuil.
     private static final double CRITICAL_MOLD_LEVEL = 90.0; //90.0 : si le niveau de moisissure est très haut, la mort devient plus probable.
 
     public SimulationController(ArchiveRoom room, Map<Wall, List<Shelf>> shelvesByWall, Environment environment) {

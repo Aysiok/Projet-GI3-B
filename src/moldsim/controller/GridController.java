@@ -124,7 +124,7 @@ public class GridController {
         @Override
         public void onShelfPlaced(int row, int col, int width, int height) {
             String id = "S" + (shelves.size() + 1);
-            int planks = Math.max(1, height / 5);
+            int planks = Math.max(1, height / 10);
             Shelf shelf = new Shelf(id, col, row, width, height, planks, gridView.getNextShelfValue());
             shelves.add(shelf);
             simulation.updateShelves(shelves);
@@ -469,15 +469,15 @@ public class GridController {
         grid.setHgap(10);
         grid.setVgap(10);
 
-        javafx.scene.control.TextField widthField  = new javafx.scene.control.TextField("4");
-        javafx.scene.control.TextField heightField = new javafx.scene.control.TextField("20");
+        javafx.scene.control.TextField widthField  = new javafx.scene.control.TextField("1.0");
+        javafx.scene.control.TextField heightField = new javafx.scene.control.TextField("2.0");
         javafx.scene.control.ComboBox<String> valueBox = new javafx.scene.control.ComboBox<>();
         valueBox.getItems().addAll("LOW", "MEDIUM", "HIGH", "CRITICAL");
         valueBox.setValue("MEDIUM");
 
-        grid.add(new javafx.scene.control.Label("Width:"),  0, 0);
+        grid.add(new javafx.scene.control.Label("Width (m):"),  0, 0);
         grid.add(widthField,  1, 0);
-        grid.add(new javafx.scene.control.Label("Height:"), 0, 1);
+        grid.add(new javafx.scene.control.Label("Height (m):"), 0, 1);
         grid.add(heightField, 1, 1);
         grid.add(new javafx.scene.control.Label("Value:"),  0, 2);
         grid.add(valueBox,    1, 2);
@@ -487,14 +487,19 @@ public class GridController {
         dialog.setResultConverter(btn -> {
             if (btn == okButton) {
                 try {
-                    int w = Integer.parseInt(widthField.getText().trim());
-                    int h = Integer.parseInt(heightField.getText().trim());
-                    // stocke la valeur choisie
-                    return new int[]{w, h};
+                    double widthMeters = GridScale.parseMeters(widthField.getText());
+                    double heightMeters = GridScale.parseMeters(heightField.getText());
+
+                    int widthCells = GridScale.metersToCells(widthMeters);
+                    int heightCells = GridScale.metersToCells(heightMeters);
+
+                    return new int[]{widthCells, heightCells};
+
                 } catch (NumberFormatException e) {
                     return null;
                 }
             }
+
             return null;
         });
 
@@ -511,7 +516,13 @@ public class GridController {
                 // Stocke la valeur pour l'utiliser au placement
                 gridView.setNextShelfValue(chosenValue);
                 mainView.getStatusLabel().setText(
-                    "Click on the grid to place the shelf (" + dims[0] + "x" + dims[1] + ")");
+                    "Click on the grid to place the shelf ("
+                    + String.format("%.2f", GridScale.cellsToMeters(dims[0]))
+                    + " m × "
+                    + String.format("%.2f", GridScale.cellsToMeters(dims[1]))
+                    + " m, "
+                    + dims[0] + " × " + dims[1] + " cells)"
+                );
             }
         });
     }

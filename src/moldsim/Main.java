@@ -25,10 +25,10 @@ public class Main extends Application {
 
             if (wallConfigs == null) {
                 wallConfigs = new WallConfig[] {
-                    new WallConfig(WallMaterial.CONCRETE, 60, 50),
-                    new WallConfig(WallMaterial.CONCRETE, 60, 50),
-                    new WallConfig(WallMaterial.CONCRETE, 60, 50),
-                    new WallConfig(WallMaterial.CONCRETE, 60, 50)
+                    new WallConfig(WallMaterial.CONCRETE, 3.0, 2.5),
+                    new WallConfig(WallMaterial.CONCRETE, 3.0, 2.5),
+                    new WallConfig(WallMaterial.CONCRETE, 3.0, 2.5),
+                    new WallConfig(WallMaterial.CONCRETE, 3.0, 2.5)
                 };
             }
         }
