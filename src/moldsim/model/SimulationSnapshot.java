@@ -1,5 +1,6 @@
 package moldsim.model;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -7,7 +8,9 @@ import java.util.List;
  * Snapshot of the whole simulation at a given week.
  * It stores the state of all walls, not only the displayed wall.
  */
-public class SimulationSnapshot {
+public class SimulationSnapshot implements Serializable{
+
+    private static final long serialVersionUID = 1L;
 
     private final int week;
     private final List<int[][]> wallCellStates;

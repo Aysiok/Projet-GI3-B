@@ -380,4 +380,7 @@ public class SimulationController {
         }
     }
 
+    public void setCurrentWeek(int week) {
+        this.currentWeek = week;
+    }
 }
