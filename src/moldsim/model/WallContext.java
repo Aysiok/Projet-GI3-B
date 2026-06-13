@@ -1,22 +1,23 @@
 package moldsim.model;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import moldsim.controller.SimulationController;
 
-public class WallContext {
+public class WallContext implements Serializable{
 
+    private static final long serialVersionUID = 1L;
     private String name;
     private final Wall wall;
     private final List<Shelf> shelves;
-    private final SimulationController simulationController;
+    private transient SimulationController simulationController;
 
     public WallContext(String name, int width, int height, WallMaterial material, Environment environment) {
         this.name = name;
         this.wall = new Wall(width, height, material);
         this.shelves = new ArrayList<>();
-        this.simulationController = new SimulationController(wall, environment);
-        this.simulationController.setDisplayName(name);
+        rebuildController(environment);
     }
 
     public String getName() {
@@ -37,6 +38,11 @@ public class WallContext {
 
     public void setName(String name) {
         this.name = name;
+        this.simulationController.setDisplayName(name);
+    }
+
+    public void rebuildController(Environment environment) {
+        this.simulationController = new SimulationController(wall, environment);
         this.simulationController.setDisplayName(name);
     }
 }

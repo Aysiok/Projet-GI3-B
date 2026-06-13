@@ -156,6 +156,8 @@ public class GridController {
 
         mainView.getTreatShelfButton().setOnAction(e -> {
             gridView.setInteractionMode(InteractionMode.NONE);
+            gridView.setDrawMode(GridView.DrawMode.POINT);
+            mainView.getDrawToolComboBox().setValue("Point");
             updateModeButtons();
             pendingEvent = ExternalEvent.ANTI_MOLD_TREATMENT_SHELF;
             mainView.getStatusLabel().setText("Click on a shelf to treat it.");
@@ -696,8 +698,6 @@ public class GridController {
             default:         return WallMaterial.PLASTER;
         }
     }
-    
-
 
     private void createDefaultWalls() {
         if (wallConfigs == null) {
@@ -796,13 +796,9 @@ public class GridController {
         );
     }
 
-   
-
     private void saveCurrentWallBeforeSwitch() {
         gridView.syncModelFromView();
     }
-
-    
 
     private void propagateBetweenAdjacentWalls() {
         List<WallContext> walls = wallManager.getWalls();
@@ -1133,18 +1129,12 @@ public class GridController {
     }
 
     private void saveSimulation() {
-        int[][] cellStates = gridView.copyGridState();
-        int[][] cellTypes  = gridView.copyCellTypes(); 
-        
-        SimulationState state = new SimulationState(cellStates, cellTypes, shelves, environment, currentStepIndex, history);
-        
-        // Choix du fichier
+        gridView.syncModelFromView();
+        SimulationState state = new SimulationState(wallManager.getWalls(), environment, currentStepIndex,history);
         javafx.stage.FileChooser chooser = new javafx.stage.FileChooser();
         chooser.setTitle("Save Simulation");
-        chooser.getExtensionFilters().add(
-            new javafx.stage.FileChooser.ExtensionFilter("Simulation files", "*.sim"));
+        chooser.getExtensionFilters().add(new javafx.stage.FileChooser.ExtensionFilter("Simulation files", "*.sim"));
         java.io.File file = chooser.showSaveDialog(mainView.getScene().getWindow());
-        
         if (file != null) {
             BinaryExporter.save(state, file.getAbsolutePath());
             mainView.getStatusLabel().setText("Saved: " + file.getName());
@@ -1154,14 +1144,11 @@ public class GridController {
    private void loadSimulation() {
         javafx.stage.FileChooser chooser = new javafx.stage.FileChooser();
         chooser.setTitle("Load Simulation");
-        chooser.getExtensionFilters().add(
-            new javafx.stage.FileChooser.ExtensionFilter("Simulation files", "*.sim"));
+        chooser.getExtensionFilters().add(new javafx.stage.FileChooser.ExtensionFilter("Simulation files", "*.sim"));
         java.io.File file = chooser.showOpenDialog(mainView.getScene().getWindow());
-        
         if (file != null) {
             SimulationState state = BinaryExporter.load(file.getAbsolutePath());
             if (state != null) {
-                // Restaure l'environnement
                 environment.setHumidity(state.getHumidity());
                 environment.setTemperature(state.getTemperature());
                 environment.setVentilation(state.getVentilation());
@@ -1169,22 +1156,16 @@ public class GridController {
                 mainView.getTemperatureSlider().setValue(state.getTemperature());
                 mainView.getVentilationSlider().setValue(state.getVentilation());
 
-                // Restaure les étagères
-                shelves.clear();
-                shelves.addAll(state.getShelves());
-
-                // Restaure la grille
-                gridView.restoreGridState(state.getCellStates());
-                gridView.restoreCellTypes(state.getCellTypes());
-                markShelvesOnGrid();
-                gridView.draw();
-
-                // Restaure l'historique
+                wallManager = new WallManager();
+                for (WallContext wc : state.getWallContexts()) {
+                    wc.rebuildController(environment);
+                    wallManager.addWall(wc);
+                }
                 history.clear();
                 history.addAll(state.getHistory());
                 currentStepIndex = state.getStep();
-                simulation.setCurrentWeek(currentStepIndex);
 
+                loadCurrentWallIntoView();
                 updateTimeDisplay();
                 updateTimeSlider();
                 updateStatistics();
