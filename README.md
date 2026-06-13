@@ -7,7 +7,6 @@
 <p>
   <img src="https://img.shields.io/badge/Java-21-1A3A6B?style=for-the-badge&logo=openjdk&logoColor=white&labelColor=0D1F3C"/>
   <img src="https://img.shields.io/badge/JavaFX-21-3A6EA5?style=for-the-badge&logoColor=white&labelColor=0D1F3C"/>
-  <img src="https://img.shields.io/badge/iText-5.5.13-7B93B4?style=for-the-badge&logoColor=white&labelColor=0D1F3C"/>
   <img src="https://img.shields.io/badge/MVC-Architecture-4A86C8?style=for-the-badge&labelColor=0D1F3C"/>
   <img src="https://img.shields.io/badge/CY_Tech-ING1--GI-3A6EA5?style=for-the-badge&labelColor=0D1F3C"/>
   <img src="https://img.shields.io/badge/2025--2026-Génie_Logiciel-1A3A6B?style=for-the-badge&labelColor=0D1F3C"/>
