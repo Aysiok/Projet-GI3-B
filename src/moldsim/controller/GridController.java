@@ -191,9 +191,20 @@ public class GridController {
 
         gridView.setShelfPlacementListener(new GridView.ShelfPlacementListener() {
             @Override
-            public void onShelfPlaced(int row, int col, int width, int height) {
+            public boolean onShelfPlaced(int row, int col, int width, int height) {
                 int forcedRow = gridView.getRows() - height;
                 int clampedCol = Math.max(0, Math.min(col, gridView.getColumns() - width));
+
+                for (Shelf existing : shelves) {
+                    boolean overlapX = clampedCol < existing.getX() + existing.getWidth()
+                                    && clampedCol + width > existing.getX();
+                    boolean overlapY = forcedRow < existing.getY() + existing.getHeight()
+                                    && forcedRow + height > existing.getY();
+                    if (overlapX && overlapY) {
+                        mainView.getStatusLabel().setText("Cannot place shelf here — overlaps with " + existing.getId() + ".");
+                        return false;
+                    }
+                }
                 String id = "S" + (shelves.size() + 1);
                 int planks = Math.max(1, height / 5);
                 Shelf shelf = new Shelf(id, clampedCol, forcedRow, width, height, planks, gridView.getNextShelfValue());
@@ -203,6 +214,7 @@ public class GridController {
                 gridView.syncModelFromView();
                 gridView.draw();
                 markCurrentStepAsModified("Shelf " + id + " placed at week " + currentStepIndex + ". Future steps were cleared.");
+                return true;
             }
 
             @Override
@@ -534,24 +546,53 @@ public class GridController {
     }
 
     private void exportPdf() {
-        moldsim.model.Statistics stats = new moldsim.model.Statistics(modelGrid, 0);
-        java.util.List<moldsim.model.Statistics> statsList = new java.util.ArrayList<>();
+    if (history.isEmpty()) {
+        mainView.getStatusLabel().setText("No simulation data to export.");
+        return;
+    }
+
+    List<moldsim.model.Statistics> statsList = new ArrayList<>();
+    List<List<String>> allLogs = new ArrayList<>();
+    int previousInfected = 0;
+
+    // Sauvegarder l'état courant
+    int savedIndex = currentStepIndex;
+
+    for (SimulationSnapshot snap : history) {
+        // Restaurer chaque mur pour calculer les stats
+        restoreAllWallsFromSnapshot(snap);
+
+        moldsim.model.Statistics stats = new moldsim.model.Statistics(modelGrid, previousInfected);
+        previousInfected = stats.getInfectedCells();
         statsList.add(stats);
 
-        String filePath = "report_" + System.currentTimeMillis() + ".pdf";
-        java.util.List<java.util.List<String>> allLogs = new java.util.ArrayList<>();
-        moldsim.model.PdfExporter.export(statsList, environment, allLogs, filePath);
-        mainView.getStatusLabel().setText("PDF exported: " + filePath);
-
-        try {
-            java.io.File file = new java.io.File(filePath);
-            if (file.exists() && java.awt.Desktop.isDesktopSupported()) {
-                java.awt.Desktop.getDesktop().open(file);
-            }
-        } catch (java.io.IOException e) {
-            mainView.getStatusLabel().setText("PDF exported but could not open: " + e.getMessage());
-        }
+        // Logs d'alerte du snapshot
+        List<String> logs = simulation.getAlertController().getHistory().stream()
+            .filter(e -> e.getWeek() == snap.getWeek())
+            .map(e -> "[" + e.getType() + "] " + e.getAlertLevel() + " — "
+            + (e.getShelf() != null
+             ? "shelf " + e.getShelf().getId()
+             : String.format("rate %.0f%%", e.getMoldRate() * 100)))
+            .collect(java.util.stream.Collectors.toList());
+        allLogs.add(logs);
     }
+
+    // Restaurer l'état courant
+    goToStep(savedIndex);
+
+    String filePath = "report_" + System.currentTimeMillis() + ".pdf";
+    moldsim.model.PdfExporter.export(statsList, environment, allLogs, filePath);
+    mainView.getStatusLabel().setText("PDF exported: " + filePath);
+
+    try {
+        java.io.File file = new java.io.File(filePath);
+        if (file.exists() && java.awt.Desktop.isDesktopSupported()) {
+            java.awt.Desktop.getDesktop().open(file);
+        }
+    } catch (java.io.IOException e) {
+        mainView.getStatusLabel().setText("PDF exported but could not open: " + e.getMessage());
+    }
+}
 
     private void advanceOneNewStep() {
         gridView.syncModelFromView();
