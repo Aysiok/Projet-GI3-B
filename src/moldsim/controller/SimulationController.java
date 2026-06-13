@@ -18,8 +18,6 @@ public class SimulationController {
     private final EventManager eventManager;
     private int currentWeek;
 
-    private static final double BASE_EXTERNAL_SPORE_DEPOSITION = 0.00002; //apparition très rare de spores venant de l’environnement extérieur
-    private static final double BASE_INTERNAL_SPORE_DEPOSITION = 0.004; //dépôt de spores dû aux moisissures sporulantes déjà présentes
     private static final double BASE_SPORE_GERMINATION = 0.05; //probabilité qu’une spore déposée germe
     private static final double SPORULATION_THRESHOLD = 10.0; //niveau de moisissure à partir duquel une cellule devient sporulante
     private static final int MIN_ACTIVE_MOLD_AGE_BEFORE_DEATH = 104; // 104 semaines : seuil de mort naturelle liée à l'âge.
@@ -194,20 +192,6 @@ public class SimulationController {
         }
     }
 
-    private int countCellsByState(Wall wall, CellState state) {
-        int count = 0;
-
-        for (Cell[] row : wall.getGrid()) {
-            for (Cell cell : row) {
-                if (cell.getState() == state) {
-                    count++;
-                }
-            }
-        }
-
-        return count;
-    }
-
     //Environment factor calculus methods
 
     private double computeHumiditySuitability(MoldSpecies species) {
@@ -246,52 +230,6 @@ public class SimulationController {
         double factor = 1.0 - ventilation / 100.0;
 
         return Math.max(0.0, Math.min(1.0, factor));
-    }
-
-    //Spore methods
-    private void depositSporesFromSporulating(Wall wall) {
-        MoldSpecies species = MoldSpecies.CLADOSPORIUM;
-
-        int totalCells = wall.getWidth() * wall.getHeight();
-
-        if (totalCells <= 0) {
-            return;
-        }
-
-        int sporulatingCount = countCellsByState(wall, CellState.SPORULATING);
-
-        double sporulatingRatio = (double) sporulatingCount / totalCells;
-
-        double sporePressure = 1.0 - Math.exp(-8.0 * sporulatingRatio);
-
-        double humidityFactor = computeHumiditySuitability(species);
-        double temperatureFactor = computeTemperatureSuitability(species);
-        double ventilationFactor = computeVentilationBlockingFactor();
-
-        double environmentalSuitability =
-                humidityFactor
-                * temperatureFactor
-                * ventilationFactor;
-
-        double probability =
-                environmentalSuitability
-                * (
-                    BASE_EXTERNAL_SPORE_DEPOSITION
-                    + BASE_INTERNAL_SPORE_DEPOSITION * sporePressure
-                );
-
-        for (Cell[] row : wall.getGrid()) {
-            for (Cell cell : row) {
-                if (cell.getState() == CellState.HEALTHY) {
-                    if (random.nextDouble() < probability) {
-                        cell.setState(CellState.DEPOSITED_SPORE);
-                        cell.setSpecies(species);
-                        cell.setMoldLevel(0.0);
-                        cell.setAge(0);
-                    }
-                }
-            }
-        }
     }
 
     private void updateDepositedSpores(Wall wall) {
