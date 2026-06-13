@@ -7,11 +7,27 @@ import moldsim.model.Cell;
 import moldsim.model.CellState;
 import moldsim.model.Wall;
 
+
+/**
+ * JavaFX canvas component used to render a preview of a wall segment.
+ * <p>
+ * This view displays a cropped horizontal slice of a wall, typically used
+ * for navigation or side previews in the UI.
+ */
 public class WallPreviewView extends Canvas {
 
+    /** Number of columns displayed in the preview. */
     private final int previewColumns;
+    /** Size of each cell in pixels. */
     private final double cellSize;
 
+    /**
+     * Creates a wall preview component.
+     *
+     * @param rows number of rows in the wall
+     * @param previewColumns number of columns displayed in the preview
+     * @param cellSize size of each cell in pixels
+     */
     public WallPreviewView(int rows, int previewColumns, double cellSize) {
         this.previewColumns = previewColumns;
         this.cellSize = cellSize;
@@ -20,6 +36,13 @@ public class WallPreviewView extends Canvas {
         setHeight(rows * cellSize);
     }
 
+    /**
+     * Renders a preview of the given wall segment.
+     *
+     * @param wall wall to render
+     * @param showRightEdge if true, displays the right-most segment of the wall;
+     *                      otherwise displays the left-most segment
+     */
     public void drawPreview(Wall wall, boolean showRightEdge) {
         if (wall == null) {
             return;

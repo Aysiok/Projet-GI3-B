@@ -1,13 +1,22 @@
 package moldsim.model;
 
 /**
- * Represents the patrimonial value of a document in the archive.
- * Used to prioritize which documents to save first.
+ * Represents the importance level of a shelf in the simulation.
+ * <p>
+ * This value is used to prioritize protection and treatment of shelves
+ * depending on their sensitivity or patrimonial importance.
  */
 public enum ShelfValue {
+    /** Low importance shelf. */
     LOW,
+
+    /** Medium importance shelf. */
     MEDIUM,
+
+    /** High importance shelf. */
     HIGH,
+
+    /** Critical importance shelf requiring maximum protection. */
     CRITICAL;
 
     @Override

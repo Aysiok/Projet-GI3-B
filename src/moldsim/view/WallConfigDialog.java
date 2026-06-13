@@ -8,18 +8,36 @@ import moldsim.model.WallMaterial;
 import moldsim.model.GridScale;
 
 /**
- * Dialog shown at startup to configure the 4 walls.
+ * Startup dialog used to configure the simulation walls.
+ * <p>
+ * Allows the user to define wall materials and dimensions (in meters or cells)
+ * before the simulation begins.
  */
 public class WallConfigDialog {
 
+    /**
+     * Data holder representing configuration of a single wall.
+     */
     public static class WallConfig {
+        /** Selected wall material. */
         public WallMaterial material;
+        /** Wall width in grid cells. */
         public int width;
+        /** Wall height in grid cells. */
         public int height;
 
+        /** Wall width in meters. */
         public double widthMeters;
+        /** Wall height in meters. */
         public double heightMeters;
 
+        /**
+         * Creates a wall configuration from meter values.
+         *
+         * @param material wall material
+         * @param widthMeters width in meters
+         * @param heightMeters height in meters
+         */
         public WallConfig(WallMaterial material, double widthMeters, double heightMeters) {
             this.material = material;
             this.widthMeters = widthMeters;
@@ -28,6 +46,13 @@ public class WallConfigDialog {
             this.height = moldsim.model.GridScale.metersToCells(heightMeters);
         }
 
+        /**
+         * Creates a wall configuration from grid cell values.
+         *
+         * @param material wall material
+         * @param width width in cells
+         * @param height height in cells
+         */
         public WallConfig(WallMaterial material, int width, int height) {
             this.material = material;
             this.width = width;
@@ -37,8 +62,14 @@ public class WallConfigDialog {
         }
     }
 
+    /** Names of the four walls in the simulation. */
     private final String[] wallNames = {"North", "South", "East", "West"};
 
+    /**
+     * Displays the configuration dialog and collects settings for all walls.
+     *
+     * @return array of wall configurations or null if cancelled
+     */
     public WallConfig[] showAndWait() {
         WallConfig[] configs = new WallConfig[4];
     
@@ -90,8 +121,11 @@ public class WallConfigDialog {
     }
 
     /**
-     * Shows a config dialog for one wall.
-     * If fixedHeight > 0, the height field is locked and shown as read-only.
+     * Displays a configuration dialog for a single wall.
+     *
+     * @param wallName name of the wall
+     * @param fixedHeightMeters fixed height if applicable (negative means editable)
+     * @return wall configuration or null if cancelled
      */
     private WallConfig showSingleWallDialog(String wallName, double fixedHeightMeters) {
         Dialog<WallConfig> dialog = new Dialog<>();

@@ -8,65 +8,113 @@ import javafx.scene.control.*;
 import javafx.scene.text.Text;
 import javafx.geometry.Pos;
 
+/**
+ * Main JavaFX view of the Mold Simulation application.
+ * <p>
+ * This class defines the full user interface layout including:
+ * left environment controls, central grid visualization,
+ * right event controls, and bottom simulation controls.
+ * It acts as the primary UI container for all interactive components.
+ */
 public class MainView extends BorderPane {
 
     // ── Left Sidebar controls ──────────────────────────────────
+    /** Slider controlling humidity level. */
     private Slider humiditySlider;
+    /** Slider controlling temperature level. */
     private Slider temperatureSlider;
+    /** Slider controlling ventilation level. */
     private Slider ventilationSlider;
+    /** Dropdown for selecting wall material. */
     private ComboBox<String> materialComboBox;
+    /** Dropdown for selecting mold species. */
     private ComboBox<String> speciesComboBox;
+    /** List view displaying simulation alerts. */
     private ListView<String> alertLogView;
 
     // ── Right Sidebar controls ──────────────────────────────────
 
+    /** Button triggering water leak event. */
     private Button waterLeakButton;
+    /** Button triggering HVAC failure event. */
     private Button hvacFailureButton;
+    /** Button triggering window open event. */
     private Button windowOpenedButton;
+    /** Button applying treatment to wall. */
     private Button treatWallButton;
+    /** Button applying treatment to shelf. */
     private Button treatShelfButton;
+    /** Slider controlling event effect radius. */
     private Slider eventRadiusSlider;
+    /** Button to activate mold drawing mode. */
     private Button addMoldButton;
 
     // ── Bottom controls ───────────────────────────────────────
+    /** Button to start simulation. */
     private Button playButton;
+    /** Button to pause simulation. */
     private Button pauseButton;
+    /** Button to reset simulation. */
     private Button resetButton;
+    /** Button to advance simulation by one step. */
     private Button stepButton;
+    /** Button to export simulation report as PDF. */
     private Button exportPdfButton;
+    /** Slider controlling simulation speed. */
     private Slider speedSlider;
+    /** Button to go to previous simulation step. */
     private Button previousStepButton;
+    /** Slider controlling simulation time navigation. */
     private Slider timeSlider;
+    /** Button to create a new shelf. */
     private Button newShelfButton;
 
-    
+    /** Dropdown for selecting drawing tool mode. */
     private ComboBox<String> drawToolComboBox;
 
+    /** Label displaying simulation status. */
     private Label statusLabel;
+    /** Label displaying infected cell statistics. */
     private Label infectedLabel;
+    /** Label displaying risk level. */
     private Label riskLabel;
+    /** Label displaying current simulation week. */
     private Label weekLabel;
 
     // ── room-wall-display ───────────────────────────────────
+    /** Label showing current room and wall context. */
     private Label currentLocationLabel;
+    /** Input field for room name. */
     private TextField roomNameField;
+    /** Input field for wall name. */
     private TextField wallNameField;
+    /** Button to apply location changes. */
     private Button applyLocationButton;
+    /** Button to save simulation state. */
     private Button saveButton;
+    /** Button to load simulation state. */
     private Button loadButton;
 
     // ── GridView ─────────────────────────────────
+    /** Main grid visualization component. */
     private GridView gridView;
 
     // ── Wall preview ─────────
+    /** Preview of previous wall. */
     private WallPreviewView leftWallPreview;
+    /** Preview of next wall. */
     private WallPreviewView rightWallPreview;
 
+    /** Button to navigate to previous wall. */
     private Button previousWallButton;
+    /** Button to navigate to next wall. */
     private Button nextWallButton;
 
+    /** Label for previous wall name. */
     private Label leftWallNameLabel;
+    /** Label for next wall name. */
     private Label rightWallNameLabel;
+    /** Label for current wall name. */
     private Label currentWallNameLabel;
 
 
@@ -349,84 +397,321 @@ public class MainView extends BorderPane {
         return lbl;
     }
 
+    /**
+     * Returns humidity slider.
+     *
+     * @return humidity slider
+     */
     public Slider getHumiditySlider()      { return humiditySlider; }
+    /**
+     * Returns temperature slider.
+     *
+     * @return temperature slider
+     */
     public Slider getTemperatureSlider()   { return temperatureSlider; }
+    /**
+     * Returns ventilation slider.
+     *
+     * @return ventilation slider
+     */
     public Slider getVentilationSlider()   { return ventilationSlider; }
+    /**
+     * Returns simulation speed slider.
+     *
+     * @return speed slider
+     */
     public Slider getSpeedSlider()         { return speedSlider; }
+    /**
+     * Returns material selection dropdown.
+     *
+     * @return material combo box
+     */
     public ComboBox<String> getMaterialComboBox() { return materialComboBox; }
+    /**
+     * Returns species selection dropdown.
+     *
+     * @return species combo box
+     */
     public ComboBox<String> getSpeciesComboBox()  { return speciesComboBox; }
+    /**
+     * Returns drawing tool selection dropdown.
+     *
+     * @return draw tool combo box
+     */
     public ComboBox<String> getDrawToolComboBox() { return drawToolComboBox; } 
+    /**
+     * Returns play button.
+     *
+     * @return play button
+     */
     public Button getPlayButton()          { return playButton; }
+    /**
+     * Returns pause button.
+     *
+     * @return pause button
+     */
     public Button getPauseButton()         { return pauseButton; }
+    /**
+     * Returns reset button.
+     *
+     * @return reset button
+     */
     public Button getResetButton()         { return resetButton; }
+    /**
+     * Returns step button.
+     *
+     * @return step button
+     */
     public Button getStepButton()          { return stepButton; }
+    /**
+     * Returns export PDF button.
+     *
+     * @return export PDF button
+     */
     public Button getExportPdfButton()     { return exportPdfButton; }
+    /**
+     * Returns status label.
+     *
+     * @return status label
+     */
     public Label getStatusLabel()          { return statusLabel; }
+    /**
+     * Returns infected statistics label.
+     *
+     * @return infected label
+     */
     public Label getInfectedLabel()        { return infectedLabel; }
+    /**
+     * Returns risk level label.
+     *
+     * @return risk label
+     */
     public Label getRiskLabel()            { return riskLabel; }
+    /**
+     * Returns grid view component.
+     *
+     * @return grid view
+     */
     public GridView getGridView()          { return gridView; }
 
+    /**
+     * Returns current location label.
+     *
+     * @return current location label
+     */
     public Label getCurrentLocationLabel() {
-    return currentLocationLabel;
+        return currentLocationLabel;
     }
 
+    /**
+     * Returns room name input field.
+     *
+     * @return room name field
+     */
     public TextField getRoomNameField() {
         return roomNameField;
     }
 
+    /**
+     * Returns wall name input field.
+     *
+     * @return wall name field
+     */
     public TextField getWallNameField() {
         return wallNameField;
     }
 
+    /**
+     * Returns apply location button.
+     *
+     * @return apply location button
+     */
     public Button getApplyLocationButton() {
         return applyLocationButton;
     }
 
+    /**
+     * Updates current location label text.
+     *
+     * @param locationText new location text
+     */
     public void updateCurrentLocationLabel(String locationText) {
         currentLocationLabel.setText("Current view: " + locationText);
     }
 
+    /**
+     * Returns week label.
+     *
+     * @return week label
+     */
     public Label getWeekLabel() {
-    return weekLabel;
-    }   
+        return weekLabel;
+    }
+
+    /**
+     * Returns previous step button.
+     *
+     * @return previous step button
+     */
     public Button getPreviousStepButton() {
         return previousStepButton;
     }
 
+    /**
+     * Returns time navigation slider.
+     *
+     * @return time slider
+     */
     public Slider getTimeSlider() {
         return timeSlider;
     }
+
+    /**
+     * Returns new shelf button.
+     *
+     * @return new shelf button
+     */
     public Button getNewShelfButton() { 
         return newShelfButton;
     }
 
-
+    /**
+     * Returns left wall preview component.
+     *
+     * @return left wall preview
+     */
     public WallPreviewView getLeftWallPreview() {
         return leftWallPreview;
     }
 
+    /**
+     * Returns right wall preview component.
+     *
+     * @return right wall preview
+     */
     public WallPreviewView getRightWallPreview() {
         return rightWallPreview;
     }
 
+    /**
+     * Returns previous wall navigation button.
+     *
+     * @return previous wall button
+     */
     public Button getPreviousWallButton() {
         return previousWallButton;
     }
 
+    /**
+     * Returns next wall navigation button.
+     *
+     * @return next wall button
+     */
     public Button getNextWallButton() {
         return nextWallButton;
     }
 
+    /**
+     * Updates wall navigation labels.
+     *
+     * @param previousWall previous wall name
+     * @param currentWall current wall name
+     * @param nextWall next wall name
+     */
     public void updateWallNavigationLabels(String previousWall, String currentWall, String nextWall) {
         leftWallNameLabel.setText(previousWall);
         currentWallNameLabel.setText(currentWall);
         rightWallNameLabel.setText(nextWall);
     }
+
+    /**
+     * Returns save button.
+     *
+     * @return save button
+     */
     public Button getSaveButton() { 
         return saveButton;
     }
 
+    /**
+     * Returns load button.
+     *
+     * @return load button
+     */
     public Button getLoadButton() {
         return loadButton;
     }
+
+    /**
+     * Returns water leak event button.
+     *
+     * @return water leak button
+     */
+    public Button getWaterLeakButton() {
+        return waterLeakButton; 
+    }
+
+    /**
+     * Returns HVAC failure event button.
+     *
+     * @return HVAC failure button
+     */
+    public Button getHvacFailureButton() { 
+        return hvacFailureButton; 
+    }
+
+    /**
+     * Returns window opened event button.
+     *
+     * @return window opened button
+     */
+    public Button getWindowOpenedButton() { 
+        return windowOpenedButton; 
+    }
+
+    /**
+     * Returns treat wall button.
+     *
+     * @return treat wall button
+     */
+    public Button getTreatWallButton() {
+        return treatWallButton; 
+    }
+
+    /**
+     * Returns treat shelf button.
+     *
+     * @return treat shelf button
+     */
+    public Button getTreatShelfButton() {
+        return treatShelfButton; 
+    }
+
+    /**
+     * Returns event radius slider.
+     *
+     * @return event radius slider
+     */
+    public Slider getEventRadiusSlider(){
+        return eventRadiusSlider; 
+    }
+    
+    /**
+     * Returns add mold button.
+     *
+     * @return add mold button
+     */
+    public Button getAddMoldButton() {
+        return addMoldButton; 
+    }
+
+    /**
+     * Returns alert log view.
+     *
+     * @return alert log view
+     */
+    public ListView<String> getAlertLogView() { 
+        return alertLogView; 
+    }
+
 }

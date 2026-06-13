@@ -9,11 +9,24 @@ import moldsim.view.MainView;
 import moldsim.view.WallConfigDialog;
 import moldsim.view.WallConfigDialog.WallConfig;
 
+/**
+ * Entry point of the ArchiveShield Mold Risk Simulator application.
+ * <p>
+ * Initializes the JavaFX application, shows the wall configuration dialog
+ * on first launch, and starts the main simulation UI.
+ */
 public class Main extends Application {
 
+    /** Global configuration of all simulation walls. */
     private static WallConfig[] wallConfigs = null;
+    /** Ensures configuration dialog is shown only once. */
     private static boolean configShown = false;
 
+    /**
+     * Starts the JavaFX application and initializes the simulation UI.
+     *
+     * @param primaryStage primary stage provided by JavaFX
+     */
     @Override
     public void start(Stage primaryStage) {
 
@@ -41,6 +54,11 @@ public class Main extends Application {
         primaryStage.show();
     }
 
+    /**
+     * Launches the JavaFX application.
+     *
+     * @param args command-line arguments
+     */
     public static void main(String[] args) {
         launch(args);
     }

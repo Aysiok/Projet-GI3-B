@@ -322,6 +322,9 @@ public class GridController {
         });    
     }
 
+    /**
+     * Updates the grid view to display all shelves and their contents.
+     */
     private void markShelvesOnGrid() {
     gridView.clearStructure();
 
@@ -386,6 +389,9 @@ public class GridController {
         }
     }
 }
+    /**
+     * Starts automatic simulation execution.
+     */
     private void play() {
         if (isRunning) return;
         isRunning = true;
@@ -405,6 +411,9 @@ public class GridController {
         mainView.getStatusLabel().setText("Simulation running...");
     }
 
+    /**
+     * Pauses automatic simulation execution.
+     */
     private void pause() {
         if (!isRunning) return;
         isRunning = false;
@@ -416,11 +425,17 @@ public class GridController {
         mainView.getStatusLabel().setText("Simulation paused.");
     }
 
+    /**
+     * Advances the simulation by one step.
+     */
     private void step() {
         if (currentStepIndex < history.size() - 1) goToStep(currentStepIndex + 1);
         else advanceOneNewStep();
     }
 
+    /**
+     * Moves back to the previous simulation step.
+     */
     private void previousStep() {
         if (currentStepIndex <= 0) {
             mainView.getStatusLabel().setText("Already at initial step.");
@@ -429,6 +444,9 @@ public class GridController {
         goToStep(currentStepIndex - 1);
     }
 
+    /**
+     * Resets the simulation and all walls to their initial state.
+     */
     private void reset() {
         currentStepIndex = 0;
         history.clear();
@@ -450,6 +468,9 @@ public class GridController {
         mainView.getStatusLabel().setText("Simulation reset for all walls.");
     }
 
+    /**
+     * Updates infection statistics and risk indicators.
+     */
     private void updateStatistics() {
         int infected = gridView.countInfectedCells();
         int total = gridView.getRows() * gridView.getColumns();
@@ -467,6 +488,9 @@ public class GridController {
             mainView.getRiskLabel().setText("Risk: High");
         }
     }
+    /**
+     * Updates the current location using user-provided values.
+     */
     private void updateLocationFromInput() {
         String roomName = mainView.getRoomNameField().getText().trim();
         String wallName = mainView.getWallNameField().getText().trim();
@@ -493,6 +517,9 @@ public class GridController {
         );
     }
 
+    /**
+     * Saves the current simulation state as a snapshot.
+     */
     private void saveCurrentSnapshot() {
         SimulationSnapshot snapshot = createSnapshot(currentStepIndex);
         history.add(snapshot);
@@ -500,11 +527,17 @@ public class GridController {
         updateTimeSlider();
     }
 
+    /**
+     * Updates the displayed simulation time.
+     */
     private void updateTimeDisplay() {
         int week = currentStepIndex;
         mainView.getWeekLabel().setText("Time elapsed: " + week + " week(s)");
     }
 
+    /**
+     * Updates the appearance of interaction mode buttons.
+     */
     private void updateModeButtons() {
         InteractionMode mode = gridView.getInteractionMode();
         String active   = "-fx-background-color: #FFD700; -fx-text-fill: black;";
@@ -515,6 +548,11 @@ public class GridController {
         mainView.getTreatWallButton().setStyle(mode == InteractionMode.TREAT_WALL ? active : treatBase);
     }
 
+    /**
+     * Restores a specific simulation step.
+     *
+     * @param targetIndex index of the step to restore
+     */
     private void goToStep(int targetIndex) {
         if (targetIndex < 0 || targetIndex >= history.size()) return;
         currentStepIndex = targetIndex;
@@ -536,6 +574,11 @@ public class GridController {
         mainView.getStatusLabel().setText("Moved to week " + snapshot.getWeek() + ".");
     }
 
+    /**
+     * Marks the current step as modified and updates the history.
+     *
+     * @param message status message to display
+     */
     private void markCurrentStepAsModified(String message) {
         replaceCurrentSnapshot();
         if (currentStepIndex < history.size() - 1) {
@@ -547,11 +590,17 @@ public class GridController {
         mainView.getStatusLabel().setText(message);
     }
 
-   private void replaceCurrentSnapshot() {
+    /**
+     * Replaces the snapshot associated with the current step.
+     */
+    private void replaceCurrentSnapshot() {
         SimulationSnapshot updatedSnapshot = createSnapshot(currentStepIndex);
         history.set(currentStepIndex, updatedSnapshot);
     }
 
+    /**
+     * Exports simulation results to a PDF document.
+     */
     private void exportPdf() {
         if (history.isEmpty()) {
             mainView.getStatusLabel().setText("No simulation data to export.");
@@ -594,6 +643,9 @@ public class GridController {
         }
     }
 
+    /**
+     * Computes and stores the next simulation step.
+     */
     private void advanceOneNewStep() {
         gridView.syncModelFromView();
 
@@ -635,6 +687,9 @@ public class GridController {
         mainView.getStatusLabel().setText("Advanced to week " + nextWeek + ".");
     }
 
+    /**
+     * Synchronizes the time slider with the current history state.
+     */
     private void updateTimeSlider() {
         updatingTimeSlider = true;
         int maxIndex = Math.max(0, history.size() - 1);
@@ -643,6 +698,9 @@ public class GridController {
         updatingTimeSlider = false;
     }
 
+    /**
+     * Opens the dialog used to create and place a new shelf.
+     */
     private void openNewShelfDialog() {
         javafx.scene.control.Dialog<int[]> dialog = new javafx.scene.control.Dialog<>();
         dialog.setTitle("New Shelf");
@@ -711,11 +769,22 @@ public class GridController {
         });
     }
 
+    /**
+     * Handles modifications to simulation parameters.
+     *
+     * @param parameterName name of the modified parameter
+     */
     private void markSimulationParametersChanged(String parameterName) {
         if (updatingControls) return;
         markCurrentStepAsModified(parameterName + " changed at week " + currentStepIndex + ". Future steps were cleared.");
     }
 
+    /**
+     * Creates a snapshot of the current simulation state.
+     *
+     * @param week simulation week associated with the snapshot
+     * @return the created snapshot
+     */
     private SimulationSnapshot createSnapshot(int week) {
         gridView.syncModelFromView();
         List<int[][]> wallStates = copyAllWallStates();
@@ -749,6 +818,11 @@ public class GridController {
         );
     }
 
+    /**
+     * Restores environment settings from a snapshot.
+     *
+     * @param snapshot snapshot containing environment data
+     */
     private void restoreEnvironmentFromSnapshot(SimulationSnapshot snapshot) {
         updatingControls = true;
         mainView.getHumiditySlider().setValue(snapshot.getHumidity());
@@ -763,6 +837,12 @@ public class GridController {
         modelGrid.setMaterial(snapshot.getMaterial());
     }
 
+    /**
+     * Converts a wall material into its display label.
+     *
+     * @param material wall material
+     * @return display label
+     */
     private String toMaterialLabel(WallMaterial material) {
         switch (material) {
             case CONCRETE: return "Concrete";
@@ -773,6 +853,12 @@ public class GridController {
         }
     }
 
+    /**
+     * Converts a display label into a wall material.
+     *
+     * @param label material label
+     * @return corresponding wall material
+     */
     private WallMaterial toWallMaterial(String label) {
         switch (label) {
             case "Concrete": return WallMaterial.CONCRETE;
@@ -783,6 +869,9 @@ public class GridController {
         }
     }
 
+    /**
+     * Creates the default wall configuration.
+     */
     private void createDefaultWalls() {
         if (wallConfigs == null) {
             WallMaterial mat = toWallMaterial(mainView.getMaterialComboBox().getValue());
@@ -800,6 +889,12 @@ public class GridController {
         addConfiguredWall("West Wall",  wallConfigs[3]);
     }
 
+    /**
+     * Adds a configured wall to the wall manager.
+     *
+     * @param name wall name
+     * @param config wall configuration
+     */
     private void addConfiguredWall(String name, WallConfigDialog.WallConfig config) {
         wallManager.addWall(new WallContext(
             name,
@@ -810,6 +905,9 @@ public class GridController {
         ));
     }
 
+    /**
+     * Loads the currently selected wall into the user interface.
+     */
     private void loadCurrentWallIntoView() {
         WallContext current = wallManager.getCurrentWallContext();
 
@@ -833,6 +931,9 @@ public class GridController {
         refreshCurrentLocationDisplay();
     }
 
+    /**
+     * Updates wall navigation previews and labels.
+     */
     private void updateWallNavigationView() {
         WallContext previous = wallManager.getPreviousWallContext();
         WallContext current = wallManager.getCurrentWallContext();
@@ -848,6 +949,9 @@ public class GridController {
         );
     }
 
+    /**
+     * Switches to the previous wall.
+     */
     private void moveToPreviousWall() {
         saveCurrentWallBeforeSwitch();
 
@@ -864,6 +968,9 @@ public class GridController {
         );
     }
 
+    /**
+     * Switches to the next wall.
+     */
     private void moveToNextWall() {
         saveCurrentWallBeforeSwitch();
 
@@ -880,10 +987,16 @@ public class GridController {
         );
     }
 
+    /**
+     * Saves the current wall state before navigation.
+     */
     private void saveCurrentWallBeforeSwitch() {
         gridView.syncModelFromView();
     }
 
+    /**
+     * Propagates contamination between adjacent walls.
+     */
     private void propagateBetweenAdjacentWalls() {
         List<WallContext> walls = wallManager.getWalls();
 
@@ -900,6 +1013,12 @@ public class GridController {
         }
     }
 
+    /**
+     * Propagates contamination from a wall's right edge to another wall's left edge.
+     *
+     * @param sourceContext source wall context
+     * @param targetContext target wall context
+     */
     private void propagateRightEdgeToLeftEdge(WallContext sourceContext, WallContext targetContext) {
         Wall sourceWall = sourceContext.getWall();
         Wall targetWall = targetContext.getWall();
@@ -935,6 +1054,12 @@ public class GridController {
         }
     }
 
+    /**
+     * Propagates contamination from a wall's left edge to another wall's right edge.
+     *
+     * @param sourceContext source wall context
+     * @param targetContext target wall context
+     */
     private void propagateLeftEdgeToRightEdge(WallContext sourceContext, WallContext targetContext) {
         Wall sourceWall = sourceContext.getWall();
         Wall targetWall = targetContext.getWall();
@@ -970,6 +1095,11 @@ public class GridController {
         }
     }
 
+    /**
+     * Copies the state of all walls.
+     *
+     * @return copied wall states
+     */
     private List<int[][]> copyAllWallStates() {
         List<int[][]> allStates = new ArrayList<>();
 
@@ -980,6 +1110,12 @@ public class GridController {
         return allStates;
     }
 
+    /**
+     * Creates a copy of a wall state.
+     *
+     * @param wall wall to copy
+     * @return copied state matrix
+     */
     private int[][] copyWallState(Wall wall) {
         int height = wall.getHeight();
         int width = wall.getWidth();
@@ -1009,6 +1145,11 @@ public class GridController {
         return state;
     }
 
+    /**
+     * Restores all walls from a snapshot.
+     *
+     * @param snapshot snapshot to restore
+     */
     private void restoreAllWallsFromSnapshot(SimulationSnapshot snapshot) {
         List<int[][]> allStates = snapshot.getWallCellStates();
         List<WallContext> wallContexts = wallManager.getWalls();
@@ -1023,6 +1164,12 @@ public class GridController {
         }
     }
 
+    /**
+     * Restores a wall state from saved data.
+     *
+     * @param wall wall to restore
+     * @param savedState saved state matrix
+     */
     private void restoreWallState(Wall wall, int[][] savedState) {
         if (wall == null || savedState == null) {
             return;
@@ -1072,6 +1219,9 @@ public class GridController {
         }
     }
 
+    /**
+     * Resets every wall to a healthy state.
+     */
     private void resetAllWalls() {
         for (WallContext wallContext : wallManager.getWalls()) {
             Wall wall = wallContext.getWall();
@@ -1091,6 +1241,9 @@ public class GridController {
         }
     }
 
+    /**
+     * Refreshes location information displayed in the interface.
+     */
     private void refreshCurrentLocationDisplay() {
         WallContext current = wallManager.getCurrentWallContext();
 
@@ -1102,6 +1255,9 @@ public class GridController {
         updateWallNavigationView();
     }
 
+    /**
+     * Saves the current simulation to a file.
+     */
     private void saveSimulation() {
         gridView.syncModelFromView();
         SimulationState state = new SimulationState(wallManager.getWalls(), environment, currentStepIndex,history);
@@ -1115,7 +1271,10 @@ public class GridController {
         }
     }
 
-   private void loadSimulation() {
+    /**
+     * Loads a simulation from a file.
+     */
+    private void loadSimulation() {
         javafx.stage.FileChooser chooser = new javafx.stage.FileChooser();
         chooser.setTitle("Load Simulation");
         chooser.getExtensionFilters().add(new javafx.stage.FileChooser.ExtensionFilter("Simulation files", "*.sim"));

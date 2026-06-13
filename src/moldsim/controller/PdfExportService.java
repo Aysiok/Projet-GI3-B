@@ -8,8 +8,23 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * Service responsible for generating and opening PDF simulation reports.
+ * <p>
+ * This class collects simulation statistics, alert history, and environment
+ * data, then delegates report generation to the PDF exporter.
+ */
 public class PdfExportService {
 
+    /**
+     * Exports simulation data to a PDF report.
+     *
+     * @param history simulation history snapshots
+     * @param walls wall contexts used to restore states
+     * @param environment simulation environment
+     * @param alertSource source of alert information
+     * @return the generated PDF file path, or null if no data is available
+     */
     public String export(List<SimulationSnapshot> history, List<WallContext> walls, Environment environment, SimulationController alertSource) {
         if (history.isEmpty()) return null;
 
@@ -34,6 +49,12 @@ public class PdfExportService {
         return filePath;
     }
 
+    /**
+     * Opens a generated PDF file using the system default application.
+     *
+     * @param filePath path of the PDF file to open
+     * @throws IOException if the file cannot be opened
+     */
     public void openFile(String filePath) throws IOException {
         File file = new File(filePath);
         if (file.exists() && java.awt.Desktop.isDesktopSupported()) {
@@ -41,6 +62,12 @@ public class PdfExportService {
         }
     }
 
+    /**
+     * Restores all wall states from a simulation snapshot.
+     *
+     * @param snapshot snapshot containing saved wall states
+     * @param walls wall contexts to restore
+     */
     private void restoreAllWallsFromSnapshot(SimulationSnapshot snapshot, List<WallContext> walls) {
         List<int[][]> allStates = snapshot.getWallCellStates();
         int limit = Math.min(allStates.size(), walls.size());
@@ -49,6 +76,12 @@ public class PdfExportService {
         }
     }
 
+    /**
+     * Restores a wall using a previously saved state matrix.
+     *
+     * @param wall wall to restore
+     * @param savedState saved cell state matrix
+     */
     private void restoreWallState(Wall wall, int[][] savedState) {
         if (wall == null || savedState == null) return;
         int height = Math.min(wall.getHeight(), savedState.length);
