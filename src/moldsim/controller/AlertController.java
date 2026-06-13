@@ -35,7 +35,7 @@ public class AlertController {
         if (recommendationEngine != null) {
             recommendationEngine.analyze(event).forEach(r -> {
                 String message = contextualizeRecommendation(r);
-                System.out.println("[RECOMMANDATION] " + message);
+                System.out.println("[RECOMMENDATION] " + message);
             });
         }
     }
@@ -43,16 +43,16 @@ public class AlertController {
     private void log(SensorEvent event) {
     switch (event.getType()) {
         case GLOBAL : 
-            System.out.printf("[ALERTE GLOBALE] %s | Semaine %d | %s | taux %.1f%%%n", contextName, event.getWeek(), event.getAlertLevel(), event.getMoldRate() * 100);
+            System.out.printf("[GLOBAL ALERT] %s | Week %d | %s | rate %.1f%%%n", contextName, event.getWeek(), event.getAlertLevel(), event.getMoldRate() * 100);
             break;
         case SHELF : 
             if (event.getShelf() == null) {
                 System.err.printf(
-                    "[ERREUR] %s | Semaine %d | event SHELF reçu sans étagère associée%n",
+                    "[ERROR] %s | Week %d | SHELF event received without associated shelf%n",
                     contextName, event.getWeek());
                 return;
             }
-            System.out.printf("[ALERTE ÉTAGÈRE] %s | Semaine %d | %s | étagère %s | taux %.1f%%%n", contextName, event.getWeek(), event.getAlertLevel(), event.getShelf().getId(), event.getMoldRate() * 100);
+            System.out.printf("[SHELF ALERT] %s | Week %d | %s | shelf %s | rate %.1f%%%n", contextName, event.getWeek(), event.getAlertLevel(), event.getShelf().getId(), event.getMoldRate() * 100);
             break;
     }
 }

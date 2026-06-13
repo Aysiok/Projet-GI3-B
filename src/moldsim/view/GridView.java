@@ -95,8 +95,9 @@ public class GridView extends Canvas {
             }
             if (placementMode) {
                 if (event.getButton() == MouseButton.PRIMARY && shelfPlacementListener != null) {
-                    shelfPlacementListener.onShelfPlaced(row, col, ghostWidth, ghostHeight);
-                    disablePlacementMode();
+                    boolean placed = shelfPlacementListener.onShelfPlaced(row, col, ghostWidth, ghostHeight);
+                    if (placed) disablePlacementMode();
+
                 } else if (drawMode == DrawMode.BRUSH) {
                     setCellStateAndSync(row, col, INFECTED);
                     draw();
@@ -646,8 +647,8 @@ public class GridView extends Canvas {
     // ═════════════════════════════════════════════════════════════════════════
 
     public interface ShelfPlacementListener {
-        void onShelfPlaced(int row, int col, int width, int height);
-        void onShelfRemoved(int row, int col); // ← ajoute ça
+        boolean onShelfPlaced(int row, int col, int width, int height);
+        void onShelfRemoved(int row, int col);
     }
 
     public enum InteractionMode {

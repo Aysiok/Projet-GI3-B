@@ -23,16 +23,15 @@ public class RecommendationEngine {
         String wallName = getWallName(event.getWall());
         switch (event.getAlertLevel()) {
             case CRITICAL -> {
-                recommendations.add("CRITIQUE : mur " + wallName + " à "
+                recommendations.add("CRITICAL: wall " + wallName + " at "
                     + format(event.getMoldRate())
-                    + " infecté — déshumidifier immédiatement");
-                recommendations.add("Augmenter la ventilation de la pièce");
+                    + " infected — dehumidify immediately");
+                recommendations.add("Increase room ventilation");
             }
-            case HIGH -> recommendations.add("ÉLEVÉ : mur " + wallName + " à "
+            case HIGH -> recommendations.add("HIGH: wall " + wallName + " at "
                     + format(event.getMoldRate())
-                    + " infecté — traiter les zones touchées");
-            case MEDIUM -> recommendations.add("ATTENTION : mur " + wallName
-                    + " — premiers signes de contamination, surveiller");
+                    + " infected — treat affected areas");
+            case MEDIUM -> recommendations.add("WARNING: wall " + wallName + " — first signs of contamination, monitor closely");
             case LOW -> {}
         }
         return recommendations;
@@ -43,23 +42,23 @@ public class RecommendationEngine {
         Shelf shelf = event.getShelf();
         String wallName = getWallName(event.getWall());
         switch (event.getAlertLevel()) {
-            case CRITICAL -> recommendations.add("URGENT : étagère " + shelf.getId()
-                    + " [" + shelf.getValue() + "] infectée sur mur " + wallName
-                    + " — évacuation immédiate");
-            case HIGH -> recommendations.add("PRÉVENTIF : étagère " + shelf.getId()
-                    + " [" + shelf.getValue() + "] menacée sur mur " + wallName
-                    + " — zone voisine infectée");
+            case CRITICAL -> recommendations.add("URGENT: shelf " + shelf.getId()
+        + " [" + shelf.getValue() + "] infected on wall " + wallName
+        + " — immediate removal required");
+        case HIGH -> recommendations.add("PREVENTIVE: shelf " + shelf.getId()
+                + " [" + shelf.getValue() + "] at risk on wall " + wallName
+                + " — neighboring area infected");
             default -> {}
         }
         return recommendations;
     }
 
     private String getWallName(Wall wall) {
-        if (wall == room.getNorthWall()) return "Nord";
-        if (wall == room.getSouthWall()) return "Sud";
-        if (wall == room.getEastWall())  return "Est";
-        if (wall == room.getWestWall())  return "Ouest";
-        return "inconnu";
+        if (wall == room.getNorthWall()) return "North";
+        if (wall == room.getSouthWall()) return "South";
+        if (wall == room.getEastWall())  return "East";
+        if (wall == room.getWestWall())  return "West";
+        return "unknow";
     }
 
     private String format(double rate) {
