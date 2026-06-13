@@ -25,6 +25,7 @@ public class GridController {
     private Environment environment;
     private SimulationController simulation;
     private ExternalEvent pendingEvent = null;
+    private InteractionMode previousMode = InteractionMode.NONE;
     private WallManager wallManager;
     
     private boolean updatingTimeSlider;
@@ -140,9 +141,12 @@ public class GridController {
         mainView.getLoadButton().setOnAction(event -> loadSimulation());
 
         mainView.getWaterLeakButton().setOnAction(e -> {
-        pendingEvent = ExternalEvent.WATER_LEAK;
-        mainView.getStatusLabel().setText("Click on the grid to place a water leak.");
-    });
+            previousMode = gridView.getInteractionMode();
+            gridView.setInteractionMode(InteractionMode.NONE);
+            updateModeButtons();
+            pendingEvent = ExternalEvent.WATER_LEAK;
+            mainView.getStatusLabel().setText("Click on the grid to place a water leak.");
+        });
 
         mainView.getHvacFailureButton().setOnAction(e -> {
             simulation.getEventManager().apply(ExternalEvent.HVAC_FAILURE, modelGrid, 0, 0, 0);
@@ -239,9 +243,11 @@ public class GridController {
                 switch (pendingEvent) {
                     case WATER_LEAK -> {
                         simulation.getEventManager().apply(ExternalEvent.WATER_LEAK, modelGrid, column, row, radius);
-                        mainView.getHumiditySlider().setValue(environment.getHumidity());
                         gridView.syncViewFromModel();
                         markCurrentStepAsModified("Water leak at week " + currentStepIndex + ". Future steps were cleared.");
+                        updatingControls = true;
+                        mainView.getHumiditySlider().setValue(environment.getHumidity());
+                        updatingControls = false;
                     }
                     case ANTI_MOLD_TREATMENT_WALL -> {
                         simulation.getEventManager().apply(ExternalEvent.ANTI_MOLD_TREATMENT_WALL, modelGrid, column, row, radius);
@@ -260,12 +266,13 @@ public class GridController {
                             markCurrentStepAsModified("Shelf " + target.getId() + " treated at week " + currentStepIndex + ". Future steps were cleared.");
                         } else {
                             mainView.getStatusLabel().setText("No shelf at this location.");
-                            return;
                         }
                     }
                     default -> {}
                 }
                 pendingEvent = null;
+                gridView.setInteractionMode(previousMode);
+                updateModeButtons();
             } else {
                 switch (mode) {
                     case ADD_MOLD -> {
