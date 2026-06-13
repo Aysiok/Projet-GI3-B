@@ -29,6 +29,7 @@ public class MainView extends BorderPane {
     private Button treatWallButton;
     private Button treatShelfButton;
     private Slider eventRadiusSlider;
+    private Button addMoldButton;
 
     // ── Bottom controls ───────────────────────────────────────
     private Button playButton;
@@ -279,14 +280,19 @@ public class MainView extends BorderPane {
             eventRadiusSlider
         );
 
+        sidebar.getChildren().add(sectionLabel("Drawing Modes"));
+
+        addMoldButton = new Button("Add Mold");
+        addMoldButton.setMaxWidth(Double.MAX_VALUE);
+        addMoldButton.setStyle("-fx-background-color: #3A7A3A; -fx-text-fill: white;");
+
+        sidebar.getChildren().add(addMoldButton);
         sidebar.getChildren().add(sectionLabel("Treatments"));
 
         treatWallButton = new Button("Treat Wall Zone");
         treatShelfButton = new Button("Treat Shelf");
-
         treatWallButton.setMaxWidth(Double.MAX_VALUE);
         treatShelfButton.setMaxWidth(Double.MAX_VALUE);
-
         treatWallButton.setStyle("-fx-background-color: #5A3A7A; -fx-text-fill: white;");
         treatShelfButton.setStyle("-fx-background-color: #5A3A7A; -fx-text-fill: white;");
 
@@ -372,4 +378,5 @@ public class MainView extends BorderPane {
     public Button getTreatWallButton()    { return treatWallButton; }
     public Button getTreatShelfButton()   { return treatShelfButton; }
     public Slider getEventRadiusSlider()  { return eventRadiusSlider; }
+    public Button getAddMoldButton() { return addMoldButton; }
 }

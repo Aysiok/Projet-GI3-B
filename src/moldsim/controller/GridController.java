@@ -2,12 +2,15 @@ package moldsim.controller;
 
 import moldsim.model.*;
 import moldsim.view.GridView;
+import moldsim.view.GridView.InteractionMode;
 import moldsim.view.MainView;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import javafx.scene.input.MouseButton;
 /**
  * Controller for the grid interface.
  * Connects MainView controls to GridView actions.
@@ -119,6 +122,18 @@ public class GridController {
             mainView.getStatusLabel().setText("Click on a shelf to treat it.");
         });
 
+        mainView.getAddMoldButton().setOnAction(e -> {
+            gridView.setInteractionMode(InteractionMode.ADD_MOLD);
+            mainView.getStatusLabel().setText("Draw mode: Mold — left click to paint, right click to erase.");
+            updateModeButtons();
+        });
+
+        mainView.getTreatWallButton().setOnAction(e -> {
+            gridView.setInteractionMode(InteractionMode.TREAT_WALL);
+            mainView.getStatusLabel().setText("Draw mode: Treatment — left click to treat, right click to erase.");
+            updateModeButtons();
+        });
+
         gridView.setShelfPlacementListener(new GridView.ShelfPlacementListener() {
         @Override
         public void onShelfPlaced(int row, int col, int width, int height) {
@@ -166,7 +181,10 @@ public class GridController {
             goToStep(targetIndex);
         });
 
-        gridView.setCellClickListener((row, column) -> {
+        gridView.setCellClickListener((row, column, button) -> {
+            boolean isErase = button == MouseButton.SECONDARY;
+            InteractionMode mode = gridView.getInteractionMode();
+
             if (pendingEvent != null) {
                 int radius = (int) mainView.getEventRadiusSlider().getValue();
                 switch (pendingEvent) {
@@ -195,9 +213,19 @@ public class GridController {
                     default -> {}
                 }
                 pendingEvent = null;
-            } else {
-                gridView.toggleInfection(row, column);
-                markCurrentStepAsModified("Cell modified at week " + currentStepIndex + ". Future steps were cleared.");
+            } 
+            switch (mode) {
+                case ADD_MOLD -> {
+                    if (isErase) gridView.eraseMold(row, column);
+                    else         gridView.paintMold(row, column);
+                    markCurrentStepAsModified("Cell modified at week " + currentStepIndex + "...");
+                }
+                case TREAT_WALL -> {
+                    if (isErase) gridView.eraseMold(row, column);
+                    else         gridView.paintTreatment(row, column);
+                    markCurrentStepAsModified("Treatment applied at week " + currentStepIndex + "...");
+                }
+                case TREAT_SHELF, PLACE_EVENT, NONE -> {}
             }
         });
 
@@ -301,6 +329,7 @@ public class GridController {
             mainView.getRiskLabel().setText("Risk: High");
         }
     }
+
     private void updateLocationFromInput() {
         String roomName = mainView.getRoomNameField().getText();
         String wallName = mainView.getWallNameField().getText();
@@ -325,13 +354,25 @@ public class GridController {
     }
 
     private void updateTimeDisplay() {
-    int week = currentStepIndex;
+        int week = currentStepIndex;
 
-    mainView.getWeekLabel().setText("Time elapsed: " + week + " week(s)");
-    mainView.getStepLabel().setText(
-        "History: " + currentStepIndex + " / " + (history.size() - 1)
-    );
-}
+        mainView.getWeekLabel().setText("Time elapsed: " + week + " week(s)");
+        mainView.getStepLabel().setText(
+            "History: " + currentStepIndex + " / " + (history.size() - 1)
+        );
+    }
+
+    private void updateModeButtons() {
+        InteractionMode mode = gridView.getInteractionMode();
+        String active   = "-fx-background-color: #FFD700; -fx-text-fill: black;";
+        String moldBase = "-fx-background-color: #3A7A3A; -fx-text-fill: white;";
+        String treatBase= "-fx-background-color: #5A3A7A; -fx-text-fill: white;";
+
+        mainView.getAddMoldButton().setStyle(
+            mode == InteractionMode.ADD_MOLD ? active : moldBase);
+        mainView.getTreatWallButton().setStyle(
+            mode == InteractionMode.TREAT_WALL ? active : treatBase);
+    }
 
     private void goToStep(int targetIndex) {
         if (targetIndex < 0 || targetIndex >= history.size()) {
