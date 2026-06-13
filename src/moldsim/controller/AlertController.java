@@ -65,11 +65,16 @@ public class AlertController {
         return history;
     }
 
+    public RecommendationEngine getRecommendationEngine() {
+        return recommendationEngine;
+    }
+    
     private String contextualizeRecommendation(String recommendation) {
         if (recommendation == null) {
             return "";
         }
 
+        
         return recommendation
                 .replace("mur Nord", contextName)
                 .replace("Mur Nord", contextName)
