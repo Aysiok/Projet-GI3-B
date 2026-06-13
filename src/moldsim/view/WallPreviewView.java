@@ -61,7 +61,7 @@ public class WallPreviewView extends Canvas {
                     gc.setFill(Color.rgb(70, 70, 70));
 
                 } else {
-                    gc.setFill(Color.rgb(190, 220, 225));
+                    gc.setFill(Color.rgb(220, 218, 213));
                 }
 
                 double x = localCol * cellSize;
