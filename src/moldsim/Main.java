@@ -4,22 +4,46 @@ import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 import moldsim.controller.GridController;
+import moldsim.model.Wall;
+import moldsim.model.WallMaterial;
 import moldsim.view.MainView;
+import moldsim.view.WallConfigDialog;
+import moldsim.view.WallConfigDialog.WallConfig;
 
-/**
- * Entry point of the JavaFX application.
- */
 public class Main extends Application {
+
+    private static WallConfig[] wallConfigs = null;
+    private static boolean configShown = false;
 
     @Override
     public void start(Stage primaryStage) {
-        MainView mainView = new MainView();
 
-        GridController gridController = new GridController(mainView);
+        if (!configShown) {
+            configShown = true;
+            WallConfigDialog configDialog = new WallConfigDialog();
+            wallConfigs = configDialog.showAndWait();
+
+            if (wallConfigs == null) {
+                wallConfigs = new WallConfig[] {
+                    new WallConfig(WallMaterial.CONCRETE, 3.0, 2.5),
+                    new WallConfig(WallMaterial.CONCRETE, 3.0, 2.5),
+                    new WallConfig(WallMaterial.CONCRETE, 3.0, 2.5),
+                    new WallConfig(WallMaterial.CONCRETE, 3.0, 2.5)
+                };
+            }
+        }
+
+        Wall northWall = new Wall(
+            wallConfigs[0].width,
+            wallConfigs[0].height,
+            wallConfigs[0].material
+        );
+
+        MainView mainView = new MainView();
+        GridController gridController = new GridController(mainView, wallConfigs);        
         gridController.initialize();
 
         Scene scene = new Scene(mainView, 1000, 700);
-
         primaryStage.setTitle("ArchiveShield — Mold Risk Simulator");
         primaryStage.setScene(scene);
         primaryStage.show();

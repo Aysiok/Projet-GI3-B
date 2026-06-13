@@ -6,15 +6,28 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.control.*;
 import javafx.scene.text.Text;
+import javafx.geometry.Pos;
 
 public class MainView extends BorderPane {
 
+    // ── Left Sidebar controls ──────────────────────────────────
     private Slider humiditySlider;
     private Slider temperatureSlider;
     private Slider ventilationSlider;
     private ComboBox<String> materialComboBox;
     private ComboBox<String> speciesComboBox;
 
+    // ── Right Sidebar controls ──────────────────────────────────
+
+    private Button waterLeakButton;
+    private Button hvacFailureButton;
+    private Button windowOpenedButton;
+    private Button treatWallButton;
+    private Button treatShelfButton;
+    private Slider eventRadiusSlider;
+    private Button addMoldButton;
+
+    // ── Bottom controls ───────────────────────────────────────
     private Button playButton;
     private Button pauseButton;
     private Button resetButton;
@@ -24,28 +37,45 @@ public class MainView extends BorderPane {
     private Button previousStepButton;
     private Slider timeSlider;
     private Button newShelfButton;
-    private Button saveButton;
-    private Button loadButton;
+
     
     private ComboBox<String> drawToolComboBox;
 
     private Label statusLabel;
-    private Label generationLabel;
     private Label infectedLabel;
     private Label riskLabel;
     private Label weekLabel;
-    private Label stepLabel;
 
+    // ── room-wall-display ───────────────────────────────────
     private Label currentLocationLabel;
     private TextField roomNameField;
     private TextField wallNameField;
     private Button applyLocationButton;
+    private Button saveButton;
+    private Button loadButton;
 
+    // ── GridView ─────────────────────────────────
     private GridView gridView;
 
+    // ── Wall preview ─────────
+    private WallPreviewView leftWallPreview;
+    private WallPreviewView rightWallPreview;
+
+    private Button previousWallButton;
+    private Button nextWallButton;
+
+    private Label leftWallNameLabel;
+    private Label rightWallNameLabel;
+    private Label currentWallNameLabel;
+
+
+    /**
+     * Builds the full layout of the application.
+     */
     public MainView() {
         setTop(buildTopBar());
         setLeft(buildSidebar());
+        setRight(buildEventSidebar());
         setCenter(buildGridArea());
         setBottom(buildBottomBar());
     }
@@ -81,6 +111,7 @@ public class MainView extends BorderPane {
         return topBar;
     }
 
+    // ── Left Sidebar ───────────────────────────────────────────────
     private VBox buildSidebar() {
         VBox sidebar = new VBox(12);
         sidebar.setPadding(new Insets(14, 12, 14, 12));
@@ -107,7 +138,7 @@ public class MainView extends BorderPane {
         Label matLabel = new Label("Wall Material");
         matLabel.setStyle("-fx-text-fill: #ccc; -fx-font-size: 11;");
         materialComboBox = new ComboBox<>();
-        materialComboBox.getItems().addAll("Plaster", "Concrete", "Wood", "Brick", "Wallpaper");
+        materialComboBox.getItems().addAll("Plaster", "Concrete", "Wood", "Brick", "Document");
         materialComboBox.setValue("Plaster");
         materialComboBox.setMaxWidth(Double.MAX_VALUE);
 
@@ -120,24 +151,76 @@ public class MainView extends BorderPane {
 
         sidebar.getChildren().addAll(humLabel, humiditySlider, tempLabel, temperatureSlider, ventLabel, ventilationSlider, matLabel, materialComboBox, specLabel, speciesComboBox);
 
+        sidebar.getChildren().add(sectionLabel("Draw Tool"));
+        drawToolComboBox = new ComboBox<>();
+        drawToolComboBox.getItems().addAll("Point", "Brush", "Rectangle");
+        drawToolComboBox.setValue("Point");
+        drawToolComboBox.setMaxWidth(Double.MAX_VALUE);
+        
+        sidebar.getChildren().add(drawToolComboBox);
+
         sidebar.getChildren().add(sectionLabel("Statistics"));
 
-        generationLabel = statLabel("Step: 0");
         weekLabel       = statLabel("Time elapsed: 0 week(s)");
-        stepLabel       = statLabel("Saved step: 0 / 0");
         infectedLabel   = statLabel("Infected: 0 (0.0%)");
         riskLabel       = statLabel("Risk: Low");
 
-        sidebar.getChildren().addAll(generationLabel, weekLabel, stepLabel, infectedLabel, riskLabel);
+        sidebar.getChildren().addAll(weekLabel, infectedLabel, riskLabel);
+
         return sidebar;
     }
 
-    private javafx.scene.layout.StackPane buildGridArea() {
-        javafx.scene.layout.StackPane stack = new javafx.scene.layout.StackPane();
-        stack.setStyle("-fx-background-color: #1A1A1A;");
-        gridView = new GridView(50, 60, 11.0);
-        stack.getChildren().add(gridView);
-        return stack;
+    // ── Grid area ─────────────────────────────────────────────
+    private javafx.scene.layout.HBox buildGridArea() {
+        javafx.scene.layout.HBox container = new javafx.scene.layout.HBox(10);
+        container.setPadding(new Insets(10));
+        container.setAlignment(Pos.TOP_CENTER);
+        container.setStyle("-fx-background-color: #1A1A1A;");
+
+        int rows = 50;
+        int columns = 60;
+        double cellSize = 11.0;
+
+        leftWallPreview = new WallPreviewView(rows, 5, cellSize);
+        rightWallPreview = new WallPreviewView(rows, 5, cellSize);
+
+        gridView = new GridView(rows, columns, cellSize);
+
+        previousWallButton = new Button("◀");
+        nextWallButton = new Button("▶");
+
+        leftWallNameLabel = new Label("Previous wall");
+        leftWallNameLabel.setStyle("-fx-text-fill: #ccc; -fx-font-size: 11;");
+
+        rightWallNameLabel = new Label("Next wall");
+        rightWallNameLabel.setStyle("-fx-text-fill: #ccc; -fx-font-size: 11;");
+
+        currentWallNameLabel = new Label("Current wall");
+        currentWallNameLabel.setStyle("-fx-text-fill: white; -fx-font-size: 12; -fx-font-weight: bold;");
+
+        javafx.scene.layout.HBox leftNav = new javafx.scene.layout.HBox(4);
+        leftNav.setAlignment(Pos.CENTER);
+        leftNav.getChildren().addAll(previousWallButton, leftWallNameLabel);
+
+        javafx.scene.layout.HBox rightNav = new javafx.scene.layout.HBox(4);
+        rightNav.setAlignment(Pos.CENTER);
+        rightNav.getChildren().addAll(rightWallNameLabel, nextWallButton);
+
+        javafx.scene.layout.VBox leftBox = new javafx.scene.layout.VBox(5);
+        leftBox.setAlignment(Pos.TOP_CENTER);
+        leftBox.getChildren().addAll(leftWallPreview, leftNav);
+
+        javafx.scene.layout.VBox centerBox = new javafx.scene.layout.VBox(5);
+        centerBox.setAlignment(Pos.TOP_CENTER);
+        centerBox.getChildren().addAll(gridView, currentWallNameLabel);
+
+        javafx.scene.layout.VBox rightBox = new javafx.scene.layout.VBox(5);
+        rightBox.setAlignment(Pos.TOP_CENTER);
+        rightBox.getChildren().addAll(rightWallPreview, rightNav);
+
+        container.getChildren().addAll(leftBox, centerBox, rightBox);
+
+        return container;
     }
 
     private VBox buildBottomBar() {
@@ -165,12 +248,6 @@ public class MainView extends BorderPane {
         timeSlider.setMinorTickCount(0);
         timeSlider.setSnapToTicks(true);
 
-        Label toolLabel = new Label("Draw Tool:");
-        toolLabel.setStyle("-fx-text-fill: #ccc; -fx-font-size: 11;");
-        drawToolComboBox = new ComboBox<>();
-        drawToolComboBox.getItems().addAll("Point", "Brush", "Rectangle");
-        drawToolComboBox.setValue("Point");
-
         playButton.setStyle("-fx-background-color: #1D9E75; -fx-text-fill: white;");
         pauseButton.setStyle("-fx-background-color: #BA7517; -fx-text-fill: white;");
         resetButton.setStyle("-fx-background-color: #555; -fx-text-fill: white;");
@@ -182,8 +259,7 @@ public class MainView extends BorderPane {
         speedSlider = new Slider(1, 10, 3);
         speedSlider.setPrefWidth(100);
 
-        buttons.getChildren().addAll(
-            toolLabel, drawToolComboBox, 
+        buttons.getChildren().addAll( 
             playButton, pauseButton, previousStepButton, stepButton, resetButton, 
             exportPdfButton, speedLabel, speedSlider, timeLabel, timeSlider, newShelfButton
         );
@@ -195,6 +271,64 @@ public class MainView extends BorderPane {
         return bottom;
     }
 
+    // ── Right Sidebar ───────────────────────────────────────────────
+
+    private VBox buildEventSidebar() {
+        VBox sidebar = new VBox(12);
+        sidebar.setPadding(new Insets(14, 12, 14, 12));
+        sidebar.setPrefWidth(180);
+        sidebar.setStyle("-fx-background-color: #1E1E1E;");
+
+        sidebar.getChildren().add(sectionLabel("External Events"));
+
+        waterLeakButton = new Button("Water Leak");
+        hvacFailureButton = new Button("HVAC Failure");
+        windowOpenedButton = new Button("Open Window");
+
+        waterLeakButton.setMaxWidth(Double.MAX_VALUE);
+        hvacFailureButton.setMaxWidth(Double.MAX_VALUE);
+        windowOpenedButton.setMaxWidth(Double.MAX_VALUE);
+
+        waterLeakButton.setStyle("-fx-background-color: #1A5C8A; -fx-text-fill: white;");
+        hvacFailureButton.setStyle("-fx-background-color: #8A1A1A; -fx-text-fill: white;");
+        windowOpenedButton.setStyle("-fx-background-color: #1A7A4A; -fx-text-fill: white;");
+
+        Label radiusLabel = new Label("Radius: 3");
+        radiusLabel.setStyle("-fx-text-fill: #ccc; -fx-font-size: 11;");
+        eventRadiusSlider = new Slider(1, 10, 3);
+        eventRadiusSlider.setShowTickLabels(true);
+        eventRadiusSlider.setMajorTickUnit(3);
+        eventRadiusSlider.setSnapToTicks(true);
+        eventRadiusSlider.setMaxWidth(Double.MAX_VALUE);
+        eventRadiusSlider.valueProperty().addListener((obs, o, n) ->
+            radiusLabel.setText(String.format("Radius: %.0f", n.doubleValue())));
+
+        sidebar.getChildren().addAll(
+            waterLeakButton, hvacFailureButton, windowOpenedButton);
+
+        sidebar.getChildren().add(sectionLabel("Drawing Modes"));
+
+        addMoldButton = new Button("Add Mold");
+        addMoldButton.setMaxWidth(Double.MAX_VALUE);
+        addMoldButton.setStyle("-fx-background-color: #3A7A3A; -fx-text-fill: white;");
+
+        sidebar.getChildren().add(addMoldButton);
+        sidebar.getChildren().add(sectionLabel("Treatments"));
+
+        treatWallButton = new Button("Treat Wall Zone");
+        treatShelfButton = new Button("Treat Shelf");
+        treatWallButton.setMaxWidth(Double.MAX_VALUE);
+        treatShelfButton.setMaxWidth(Double.MAX_VALUE);
+        treatWallButton.setStyle("-fx-background-color: #5A3A7A; -fx-text-fill: white;");
+        treatShelfButton.setStyle("-fx-background-color: #5A3A7A; -fx-text-fill: white;");
+
+        sidebar.getChildren().addAll(treatWallButton, treatShelfButton);
+
+        return sidebar;
+    }
+
+
+    // ── Helpers ───────────────────────────────────────────────
     private Label sectionLabel(String text) {
         Label lbl = new Label(text.toUpperCase());
         lbl.setStyle("-fx-text-fill: #555; -fx-font-size: 10; -fx-font-weight: bold; -fx-padding: 8 0 0 0;");
@@ -220,7 +354,6 @@ public class MainView extends BorderPane {
     public Button getStepButton()          { return stepButton; }
     public Button getExportPdfButton()     { return exportPdfButton; }
     public Label getStatusLabel()          { return statusLabel; }
-    public Label getGenerationLabel()      { return generationLabel; }
     public Label getInfectedLabel()        { return infectedLabel; }
     public Label getRiskLabel()            { return riskLabel; }
     public GridView getGridView()          { return gridView; }
@@ -248,11 +381,6 @@ public class MainView extends BorderPane {
     public Label getWeekLabel() {
     return weekLabel;
     }   
-
-    public Label getStepLabel() {
-        return stepLabel;
-    }
-
     public Button getPreviousStepButton() {
         return previousStepButton;
     }
@@ -264,13 +392,41 @@ public class MainView extends BorderPane {
         return newShelfButton;
     }
 
+
+    public WallPreviewView getLeftWallPreview() {
+        return leftWallPreview;
+    }
+
+    public WallPreviewView getRightWallPreview() {
+        return rightWallPreview;
+    }
+
+    public Button getPreviousWallButton() {
+        return previousWallButton;
+    }
+
+    public Button getNextWallButton() {
+        return nextWallButton;
+    }
+
+    public void updateWallNavigationLabels(String previousWall, String currentWall, String nextWall) {
+        leftWallNameLabel.setText(previousWall);
+        currentWallNameLabel.setText(currentWall);
+        rightWallNameLabel.setText(nextWall);
+    }
     public Button getSaveButton() { 
         return saveButton;
     }
-    public Button getLoadButton() { 
-        return loadButton; 
+
+    public Button getLoadButton() {
+        return loadButton;
     }
-
     
-
+    public Button getWaterLeakButton()    { return waterLeakButton; }
+    public Button getHvacFailureButton()  { return hvacFailureButton; }
+    public Button getWindowOpenedButton() { return windowOpenedButton; }
+    public Button getTreatWallButton()    { return treatWallButton; }
+    public Button getTreatShelfButton()   { return treatShelfButton; }
+    public Slider getEventRadiusSlider()  { return eventRadiusSlider; }
+    public Button getAddMoldButton() { return addMoldButton; }
 }
