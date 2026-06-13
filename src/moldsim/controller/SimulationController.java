@@ -42,7 +42,7 @@ public class SimulationController {
     public SimulationController(Wall wall, Environment environment) {
         this.room = new ArchiveRoom("Archive", environment);
         this.room.setNorthWall(wall);
-
+        this.eventManager = new EventManager(environment);
         this.environment = environment;
         this.sensors = new ArrayList<>();
         this.alertController = new AlertController();

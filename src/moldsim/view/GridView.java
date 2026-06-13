@@ -22,10 +22,9 @@ public class GridView extends Canvas {
     private static final int HEALTHY = 0;
     private static final int INFECTED = 1;
     private static final int DEAD = 2;
-    private static final int SPORE = 3;
-    private static final int TREATED = 4;
-    private static final int DEPOSITED_SPORE = 5;
-    private static final int SPORULATING = 6;
+    private static final int TREATED = 3;
+    private static final int DEPOSITED_SPORE = 4;
+    private static final int SPORULATING = 5;
 
     // ── cell types (public so the controller can reference them) ─────────────
     public static final int TYPE_WALL = 0;
@@ -636,11 +635,12 @@ public class GridView extends Canvas {
 
     public interface InteractionCompleteListener {
         void onComplete();
+    }
+
     public void updateViewFromModel() {
         if (modelGrid == null) {
             return;
         }
-
         for (int row = 0; row < rows; row++) {
             for (int col = 0; col < columns; col++) {
                 moldsim.model.Cell cell = modelGrid.getCell(col, row);

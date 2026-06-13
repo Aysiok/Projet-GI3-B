@@ -6,9 +6,7 @@ import moldsim.view.GridView.InteractionMode;
 import moldsim.view.MainView;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import javafx.scene.input.MouseButton;
 import moldsim.view.WallConfigDialog;
