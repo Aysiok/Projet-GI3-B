@@ -16,6 +16,7 @@ public class MainView extends BorderPane {
     private Slider ventilationSlider;
     private ComboBox<String> materialComboBox;
     private ComboBox<String> speciesComboBox;
+    private ListView<String> alertLogView;
 
     // ── Right Sidebar controls ──────────────────────────────────
 
@@ -323,6 +324,13 @@ public class MainView extends BorderPane {
         treatShelfButton.setStyle("-fx-background-color: #5A3A7A; -fx-text-fill: white;");
 
         sidebar.getChildren().addAll(treatWallButton, treatShelfButton);
+        sidebar.getChildren().add(sectionLabel("Alert Log"));
+        alertLogView = new ListView<>();
+        alertLogView.setPrefHeight(200);
+        alertLogView.setMaxWidth(Double.MAX_VALUE);
+        alertLogView.setStyle("-fx-background-color: #111; -fx-control-inner-background: #111;");
+
+        sidebar.getChildren().add(alertLogView);
 
         return sidebar;
     }
@@ -429,4 +437,5 @@ public class MainView extends BorderPane {
     public Button getTreatShelfButton()   { return treatShelfButton; }
     public Slider getEventRadiusSlider()  { return eventRadiusSlider; }
     public Button getAddMoldButton() { return addMoldButton; }
+    public ListView<String> getAlertLogView() { return alertLogView; }
 }

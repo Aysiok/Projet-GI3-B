@@ -75,4 +75,17 @@ public class AlertController {
     public RecommendationEngine getRecommendationEngine() {
         return recommendationEngine;
     }
+    
+    private String contextualizeRecommendation(String recommendation) {
+        if (recommendation == null) {
+            return "";
+        }
+
+        
+        return recommendation
+                .replace("mur Nord", contextName)
+                .replace("Mur Nord", contextName)
+                .replace("mur nord", contextName)
+                .replace("North Wall", contextName);
+    }
 }
