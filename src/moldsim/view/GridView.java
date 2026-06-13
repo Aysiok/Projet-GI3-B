@@ -419,7 +419,7 @@ public class GridView extends Canvas {
                 gc.setFill(Color.rgb(101, 67, 33));
 
             } else {
-                gc.setFill(Color.rgb(105, 240, 255));
+                gc.setFill(Color.rgb(200, 190, 175));
             }
         }
 
