@@ -337,29 +337,30 @@ public class GridView extends Canvas {
         }
 
         if (placementMode && ghostRow >= 0 && ghostCol >= 0) {
-        int clampedCol = Math.max(0, Math.min(ghostCol, columns - ghostWidth));
-        int clampedRow = rows - ghostHeight; // gravité
+            int clampedCol = Math.max(0, Math.min(ghostCol, columns - ghostWidth));
+            int clampedRow = rows - ghostHeight; // gravité
 
-        int planks = Math.max(1, ghostHeight / 5);
-        double plankSpacing = (double) ghostHeight / (planks + 1);
+            int planks = Math.max(1, ghostHeight / 5);
+            int interval = ghostHeight / (planks + 1);
+            int remainder = ghostHeight % (planks + 1);
+            // Fond de l'étagère transparent
+            gc.setFill(Color.rgb(101, 67, 33, 0.2));
+            gc.fillRect(clampedCol * cellSize, clampedRow * cellSize,
+                        ghostWidth * cellSize, ghostHeight * cellSize);
+            gc.setStroke(Color.rgb(101, 67, 33, 0.8));
+            gc.setLineWidth(1.5);
+            gc.strokeRect(clampedCol * cellSize, clampedRow * cellSize,
+                        ghostWidth * cellSize, ghostHeight * cellSize);
 
-        // Fond de l'étagère transparent
-        gc.setFill(Color.rgb(101, 67, 33, 0.2));
-        gc.fillRect(clampedCol * cellSize, clampedRow * cellSize,
-                    ghostWidth * cellSize, ghostHeight * cellSize);
-        gc.setStroke(Color.rgb(101, 67, 33, 0.8));
-        gc.setLineWidth(1.5);
-        gc.strokeRect(clampedCol * cellSize, clampedRow * cellSize,
-                    ghostWidth * cellSize, ghostHeight * cellSize);
-
-        // Planches
-        for (int p = 0; p < planks; p++) {
-            int plankRow = clampedRow + (int) ((p + 1) * plankSpacing);
-            gc.setFill(Color.rgb(101, 67, 33, 0.6));
-            gc.fillRect(clampedCol * cellSize, plankRow * cellSize,
-                        ghostWidth * cellSize, cellSize);
+            // Planches
+            for (int p = 0; p < planks; p++) {
+                int extra = (p + 1) <= remainder ? (p + 1) : remainder;
+                int plankRow = clampedRow + (p + 1) * interval + extra;
+                gc.setFill(Color.rgb(101, 67, 33, 0.6));
+                gc.fillRect(clampedCol * cellSize, plankRow * cellSize,
+                ghostWidth * cellSize, cellSize);
+            }
         }
-    }
 
         // Prévisualisation Rectangle de dessin
         if (drawMode == DrawMode.RECTANGLE && isDraggingRectangle) {

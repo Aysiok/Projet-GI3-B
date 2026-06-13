@@ -274,62 +274,48 @@ public class GridController {
     }
 
     private void markShelvesOnGrid() {
-        gridView.clearStructure();
+    gridView.clearStructure();
 
-        for (Shelf shelf : shelves) {
-            int startX = shelf.getX();
-            int startY = shelf.getY();
-            int w      = shelf.getWidth();
-            int h      = shelf.getHeight();
-            int planks = shelf.getPlankCount();
+    for (Shelf shelf : shelves) {
+        int startX = shelf.getX();
+        int startY = shelf.getY();
+        int w      = shelf.getWidth();
+        int h      = shelf.getHeight();
+        int planks = shelf.getPlankCount();
 
-            double plankSpacing = (double) h / (planks + 1);
+        int[] plankRows = new int[planks];
+        int interval = h / (planks + 1);
+        int remainder = h % (planks + 1);
 
-            // Ligne tout en haut de l'étagère
+        for (int p = 0; p < planks; p++) {
+            int extra = (p + 1) <= remainder ? (p + 1) : remainder;
+            plankRows[p] = startY + (p + 1) * interval + extra;
+        }
+
+        // Ligne tout en haut de l'étagère
+        for (int col = startX; col < startX + w; col++) {
+            gridView.setCellType(startY, col, GridView.TYPE_DOCUMENT);
+            gridView.setCellValue(startY, col, shelf.getValue());
+            Cell cell = modelGrid.getCell(col, startY);
+            if (cell != null) cell.setWallMaterial(WallMaterial.DOCUMENT);
+        }
+
+        // Planches = bois
+        for (int p = 0; p < planks; p++) {
+            int plankRow = plankRows[p];
             for (int col = startX; col < startX + w; col++) {
-                gridView.setCellType(startY, col, GridView.TYPE_DOCUMENT);
-                gridView.setCellValue(startY, col, shelf.getValue());
-                Cell cell = modelGrid.getCell(col, startY);
-                if (cell != null) cell.setWallMaterial(WallMaterial.DOCUMENT);
+                gridView.setCellType(plankRow, col, GridView.TYPE_SHELF);
+                Cell cell = modelGrid.getCell(col, plankRow);
+                if (cell != null) cell.setWallMaterial(WallMaterial.WOOD);
             }
+        }
 
-            // Planches = bois
-            for (int p = 0; p < planks; p++) {
-                int plankRow = startY + (int) ((p + 1) * plankSpacing);
+        // Espaces entre planches = documents
+        for (int p = 0; p < planks; p++) {
+            int plankRow     = plankRows[p];
+            int prevPlankRow = p == 0 ? startY : plankRows[p - 1];
 
-                for (int col = startX; col < startX + w; col++) {
-                    gridView.setCellType(plankRow, col, GridView.TYPE_SHELF);
-
-                    Cell cell = modelGrid.getCell(col, plankRow);
-                    if (cell != null) {
-                        cell.setWallMaterial(WallMaterial.WOOD);
-                    }
-                }
-            }
-
-            // Espaces entre planches = documents
-            for (int p = 0; p < planks; p++) {
-                int plankRow = startY + (int) ((p + 1) * plankSpacing);
-                int prevPlankRow = p == 0
-                        ? startY
-                        : startY + (int) (p * plankSpacing);
-
-                for (int row = prevPlankRow + 1; row < plankRow; row++) {
-                    for (int col = startX; col < startX + w; col++) {
-                        gridView.setCellType(row, col, GridView.TYPE_DOCUMENT);
-                        gridView.setCellValue(row, col, shelf.getValue());
-
-                        Cell cell = modelGrid.getCell(col, row);
-                        if (cell != null) {
-                            cell.setWallMaterial(WallMaterial.DOCUMENT);
-                        }
-                    }
-                }
-            }
-
-            // Zone après la dernière planche jusqu'en bas
-            int lastPlankRow = startY + (int) (planks * plankSpacing);
-            for (int row = lastPlankRow + 1; row < startY + h; row++) {
+            for (int row = prevPlankRow + 1; row < plankRow; row++) {
                 for (int col = startX; col < startX + w; col++) {
                     gridView.setCellType(row, col, GridView.TYPE_DOCUMENT);
                     gridView.setCellValue(row, col, shelf.getValue());
@@ -338,35 +324,47 @@ public class GridController {
                 }
             }
         }
+
+        // Zone après la dernière planche jusqu'en bas
+        int lastPlankRow = plankRows[planks - 1];
+        for (int row = lastPlankRow + 1; row < startY + h; row++) {
+            for (int col = startX; col < startX + w; col++) {
+                gridView.setCellType(row, col, GridView.TYPE_DOCUMENT);
+                gridView.setCellValue(row, col, shelf.getValue());
+                Cell cell = modelGrid.getCell(col, row);
+                if (cell != null) cell.setWallMaterial(WallMaterial.DOCUMENT);
+            }
+        }
     }
-    private void play() {
-    if (isRunning) return;
-    isRunning = true;
-
-    // Create a timer that calls step() automatically
-    double delay = 1.1 - (mainView.getSpeedSlider().getValue() / 10.0);
-    simulationTimer = new javafx.animation.Timeline(
-        new javafx.animation.KeyFrame(
-            javafx.util.Duration.seconds(delay),
-            e -> step()
-        )
-    );
-    simulationTimer.setCycleCount(javafx.animation.Animation.INDEFINITE);
-    simulationTimer.play();
-
-    mainView.getStatusLabel().setText("Simulation running...");
 }
+    private void play() {
+        if (isRunning) return;
+        isRunning = true;
+
+        // Create a timer that calls step() automatically
+        double delay = 1.1 - (mainView.getSpeedSlider().getValue() / 10.0);
+        simulationTimer = new javafx.animation.Timeline(
+            new javafx.animation.KeyFrame(
+                javafx.util.Duration.seconds(delay),
+                e -> step()
+            )
+        );
+        simulationTimer.setCycleCount(javafx.animation.Animation.INDEFINITE);
+        simulationTimer.play();
+
+        mainView.getStatusLabel().setText("Simulation running...");
+    }
 
     private void pause() {
-    if (!isRunning) return;
-    isRunning = false;
+        if (!isRunning) return;
+        isRunning = false;
 
-    if (simulationTimer != null) {
-        simulationTimer.stop();
+        if (simulationTimer != null) {
+            simulationTimer.stop();
+        }
+
+        mainView.getStatusLabel().setText("Simulation paused.");
     }
-
-    mainView.getStatusLabel().setText("Simulation paused.");
-}
 
     private void step() {
         if (currentStepIndex < history.size() - 1) goToStep(currentStepIndex + 1);
