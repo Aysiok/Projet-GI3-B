@@ -24,20 +24,24 @@ public class GridView extends Canvas {
     private static final int DEAD = 2;
     private static final int SPORE = 3;
     private static final int TREATED = 4;
+    private static final int DEPOSITED_SPORE = 5;
+    private static final int SPORULATING = 6;
 
     // ── cell types (public so the controller can reference them) ─────────────
     public static final int TYPE_WALL = 0;
     public static final int TYPE_SHELF = 1;
     public static final int TYPE_DOCUMENT = 2;
+    
 
     // ── grid data ─────────────────────────────────────────────────────────────
-    private final int rows;
-    private final int columns;
-    private final double cellSize;
-    private final int[][] cells;
-    private final int[][] cellType;
-    private final ShelfValue[][] cellValue;
 
+    private int rows;
+    private int columns;
+    private final double cellSize;
+    private int[][] cells;
+    private int[][] cellType;// 0=wall, 1=shelf, 2=document
+    private ShelfValue[][] cellValue;
+    
     // ── model references ──────────────────────────────────────────────────────
     private SimulationController simulation;
     private Wall modelGrid;
@@ -284,25 +288,8 @@ public class GridView extends Canvas {
         }
         if (simulation != null) {
             simulation.step();
-            for (int row = 0; row < rows; row++) {
-                for (int col = 0; col < columns; col++) {
-                    Cell cell = modelGrid.getCell(col, row);
-                    if (cell == null) continue;
-                    switch (cell.getState()) {
-                        case INFECTED: 
-                            cells[row][col] = INFECTED;
-                            break;
-                        case DEAD:
-                            cells[row][col] = DEAD;
-                            break;
-                        default: 
-                            cells[row][col] = HEALTHY;
-                            break;
-                    }
-                }
-            }
+            updateViewFromModel();
         }
-        draw();
     }
 
     public void reset() {
@@ -322,11 +309,16 @@ public class GridView extends Canvas {
 
     public int countInfectedCells() {
         int count = 0;
-        for (int row = 0; row < rows; row++)
-            for (int column = 0; column < columns; column++)
-                if (cells[row][column] == INFECTED) {
+
+        for (int row = 0; row < rows; row++) {
+            for (int column = 0; column < columns; column++) {
+                if (cells[row][column] == INFECTED
+                        || cells[row][column] == SPORULATING) {
                     count++;
                 }
+            }
+        }
+
         return count;
     }
 
@@ -387,33 +379,48 @@ public class GridView extends Canvas {
         int type = cellType[row][col];
         int state = cells[row][col];
 
-        if (state == INFECTED) {
+        if (state == DEPOSITED_SPORE) {
+            gc.setFill(Color.rgb(180, 160, 60));
+        } else if (state == SPORULATING) {
+            if (type == TYPE_DOCUMENT) {
+                gc.setFill(Color.rgb(160, 230, 120));
+            } else if (type == TYPE_SHELF) {
+                gc.setFill(Color.rgb(60, 150, 50));
+            } else {
+                gc.setFill(Color.rgb(90, 180, 90));
+            }
+        } else if (state == INFECTED) {
             if (type == TYPE_DOCUMENT) {
                 gc.setFill(Color.rgb(120, 206, 140));
             } else if (type == TYPE_SHELF) {
-                gc.setFill(Color.rgb(20, 100, 30)); 
+                gc.setFill(Color.rgb(20, 100, 30));
             } else {
-                gc.setFill(Color.rgb(40, 130, 60)); 
+                gc.setFill(Color.rgb(40, 130, 60));
             }
-        } else if (state == DEAD) {
-            gc.setFill(Color.rgb(70, 70, 70));
-        } else if (state == SPORE) {
-            gc.setFill(Color.rgb(180, 160, 60)); 
         } else if (state == TREATED) {
             gc.setFill(Color.rgb(133, 133, 133));
+        } else if (state == DEAD) {
+            gc.setFill(Color.rgb(70, 70, 70));
         } else {
             if (type == TYPE_DOCUMENT) {
-                ShelfValue val = cellValue[row][col];
-                gc.setFill(val == null ? Color.rgb(255, 248, 220) : switch (val) {
-                    case LOW      -> Color.rgb(200, 200, 180);
-                    case MEDIUM   -> Color.rgb(220, 200, 140);
-                    case HIGH     -> Color.rgb(240, 180,  80);
-                    case CRITICAL -> Color.rgb(220,  80,  80);
-                });
+                moldsim.model.ShelfValue val = cellValue[row][col];
+
+                if (val == null) {
+                    gc.setFill(Color.rgb(255, 248, 220));
+                } else {
+                    gc.setFill(switch (val) {
+                        case LOW      -> Color.rgb(200, 200, 180);
+                        case MEDIUM   -> Color.rgb(220, 200, 140);
+                        case HIGH     -> Color.rgb(240, 180, 80);
+                        case CRITICAL -> Color.rgb(220, 80, 80);
+                    });
+                }
+
             } else if (type == TYPE_SHELF) {
                 gc.setFill(Color.rgb(101, 67, 33));
+
             } else {
-                gc.setFill(Color.rgb(200, 190, 175));
+                gc.setFill(Color.rgb(105, 240, 255));
             }
         }
 
@@ -561,12 +568,27 @@ public class GridView extends Canvas {
         int state = cells[row][col];
         int type = cellType[row][col];
 
-        if (state == INFECTED) {
-            cell.infect(MoldSpecies.CLADOSPORIUM);
+        // Synchronisation de l'état biologique
+        if (state == DEPOSITED_SPORE) {
+            cell.setState(moldsim.model.CellState.DEPOSITED_SPORE);
+            cell.setSpecies(moldsim.model.MoldSpecies.CLADOSPORIUM);
+            cell.setMoldLevel(0.0);
+            cell.setAge(0);
+
+        } else if (state == SPORULATING) {
+            cell.setState(moldsim.model.CellState.SPORULATING);
+            cell.setSpecies(moldsim.model.MoldSpecies.CLADOSPORIUM);
+
+            if (cell.getMoldLevel() < 1.0) {
+                cell.setMoldLevel(1.0);
+            }
+
+        } else if (state == INFECTED) {
+            cell.infect(moldsim.model.MoldSpecies.CLADOSPORIUM);
+
         } else if (state == DEAD) {
             cell.kill();
-        } else if (state == SPORE) {
-            cell.setState(moldsim.model.CellState.SPORE);
+
         } else {
             cell.setState(CellState.HEALTHY);
             cell.setSpecies(null);
@@ -579,7 +601,7 @@ public class GridView extends Canvas {
         } else if (type == TYPE_DOCUMENT) {
             cell.setWallMaterial(WallMaterial.DOCUMENT);
         } else {
-            cell.setWallMaterial(WallMaterial.PLASTER);
+            cell.setWallMaterial(modelGrid.getMaterial());
         }
     }
 
@@ -605,7 +627,7 @@ public class GridView extends Canvas {
 
     public interface ShelfPlacementListener {
         void onShelfPlaced(int row, int col, int width, int height);
-        void onShelfRemoved(int row, int col);
+        void onShelfRemoved(int row, int col); // ← ajoute ça
     }
 
     public enum InteractionMode {
@@ -614,6 +636,67 @@ public class GridView extends Canvas {
 
     public interface InteractionCompleteListener {
         void onComplete();
+    public void updateViewFromModel() {
+        if (modelGrid == null) {
+            return;
+        }
+
+        for (int row = 0; row < rows; row++) {
+            for (int col = 0; col < columns; col++) {
+                moldsim.model.Cell cell = modelGrid.getCell(col, row);
+
+                if (cell == null) {
+                    continue;
+                }
+
+                switch (cell.getState()) {
+                    case DEPOSITED_SPORE:
+                        cells[row][col] = DEPOSITED_SPORE;
+                        break;
+
+                    case INFECTED:
+                        cells[row][col] = INFECTED;
+                        break;
+
+                    case SPORULATING:
+                        cells[row][col] = SPORULATING;
+                        break;
+
+                    case DEAD:
+                        cells[row][col] = DEAD;
+                        break;
+
+                    default:
+                        cells[row][col] = HEALTHY;
+                        break;
+                }
+            }
+        }
+
+        draw();
+    }
+
+    public void clearStructure() {
+        for (int row = 0; row < rows; row++) {
+            for (int col = 0; col < columns; col++) {
+                cellType[row][col] = TYPE_WALL;
+                cellValue[row][col] = null;
+            }
+        }
+    }
+
+    public void resizeGrid(int newRows, int newColumns) {
+        this.rows = newRows;
+        this.columns = newColumns;
+
+        this.cells = new int[rows][columns];
+        this.cellType = new int[rows][columns];
+        this.cellValue = new moldsim.model.ShelfValue[rows][columns];
+
+        setWidth(columns * cellSize);
+        setHeight(rows * cellSize);
+
+        draw();
     }
 
 }

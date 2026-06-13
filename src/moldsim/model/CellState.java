@@ -5,7 +5,8 @@ package moldsim.model;
  */
 public enum CellState {
     HEALTHY,
+    DEPOSITED_SPORE,
     INFECTED,
-    SPORE,
+    SPORULATING,
     DEAD
 }

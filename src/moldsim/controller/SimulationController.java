@@ -1,11 +1,11 @@
 package moldsim.controller;
 
-import moldsim.model.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import moldsim.model.*;
 
 public class SimulationController {
 
@@ -18,6 +18,14 @@ public class SimulationController {
     private final EventManager eventManager;
     private int currentWeek;
 
+    private static final double BASE_EXTERNAL_SPORE_DEPOSITION = 0.00002; //apparition très rare de spores venant de l’environnement extérieur
+    private static final double BASE_INTERNAL_SPORE_DEPOSITION = 0.004; //dépôt de spores dû aux moisissures sporulantes déjà présentes
+    private static final double BASE_SPORE_GERMINATION = 0.05; //probabilité qu’une spore déposée germe
+    private static final double SPORULATION_THRESHOLD = 10.0; //niveau de moisissure à partir duquel une cellule devient sporulante
+    private static final int MIN_ACTIVE_MOLD_AGE_BEFORE_DEATH = 104; // 104 semaines : seuil de mort naturelle liée à l'âge.
+    private static final double BASE_MOLD_DEATH_PROBABILITY = 0.04; //4% : probabilité de mort par semaine après ce seuil.
+    private static final double CRITICAL_MOLD_LEVEL = 90.0; //90.0 : si le niveau de moisissure est très haut, la mort devient plus probable.
+
     public SimulationController(ArchiveRoom room, Map<Wall, List<Shelf>> shelvesByWall, Environment environment) {
         this.room = room;
         this.environment = environment;
@@ -28,6 +36,23 @@ public class SimulationController {
         this.eventManager = new EventManager(environment);
         this.shelvesByWall = new HashMap<>(shelvesByWall);
         initSensors(shelvesByWall);
+        alertController.setRecommendationEngine(new RecommendationEngine(room));
+    }
+
+    public SimulationController(Wall wall, Environment environment) {
+        this.room = new ArchiveRoom("Archive", environment);
+        this.room.setNorthWall(wall);
+
+        this.environment = environment;
+        this.sensors = new ArrayList<>();
+        this.alertController = new AlertController();
+        this.currentWeek = 0;
+        this.random = new Random();
+
+        this.shelvesByWall = new HashMap<>();
+        this.shelvesByWall.put(wall, new ArrayList<>());
+
+        initSensors(this.shelvesByWall);
         alertController.setRecommendationEngine(new RecommendationEngine(room));
     }
 
@@ -45,9 +70,16 @@ public class SimulationController {
     // Appelé par GridView via stepSimulation()
     public void step() {
         currentWeek++;
+
         for (MoldSensor sensor : sensors) {
-            propagateOnWall(sensor.getWall());
+            Wall wall = sensor.getWall();
+
+            updateDepositedSpores(wall);          // DEPOSITED_SPORE → INFECTED ou HEALTHY
+            propagateOnWall(wall);                // INFECTED / SPORULATING → voisins
+            matureInfectedCells(wall);            // INFECTED → SPORULATING
+            killOldMoldCells(wall);
         }
+
         pollSensors();
     }
 
@@ -55,7 +87,9 @@ public class SimulationController {
         List<Cell> cellsToInfect = new ArrayList<>();
         for (Cell[] row : wall.getGrid()) {
             for (Cell cell : row) {
-                if (!cell.isInfected() || cell.getSpecies() == null) continue;
+                if (!isActiveMold(cell) || cell.getSpecies() == null) {
+                    continue;
+                }
                 for (Cell neighbor : wall.getNeighbors(cell)) {
                     if (neighbor.getState() == CellState.HEALTHY
                             && neighbor.getWallMaterial() != WallMaterial.WOOD) {
@@ -65,6 +99,7 @@ public class SimulationController {
                             cellsToInfect.add(neighbor);
                     }
                 }
+                cell.incrementAge();
                 double growth = cell.getSpecies().getMoldGrowthPerStep();
                 if (environment.getHumidity() > 80) growth *= 1.5;
                 cell.setMoldLevel(cell.getMoldLevel() + growth);
@@ -75,7 +110,7 @@ public class SimulationController {
         });
     }
 
-    private double computeInfectionProbability(Cell neighbor, MoldSpecies species, WallMaterial wallMaterial) {
+    public double computeInfectionProbability(Cell neighbor, MoldSpecies species, WallMaterial wallMaterial) {
         double humidity = environment.getHumidity();
         double temperature = environment.getTemperature();
         double ventilation = environment.getVentilation();
@@ -138,7 +173,218 @@ public class SimulationController {
         sensors.clear();
         initSensors(shelvesByWall);
     }
-    
+
+    public void setDisplayName(String displayName) {
+        alertController.setContextName(displayName);
+    }
+
+    private boolean isActiveMold(Cell cell) {
+        return cell.getState() == CellState.INFECTED
+            || cell.getState() == CellState.SPORULATING;
+    }
+
+    private void matureInfectedCells(Wall wall) {
+        for (Cell[] row : wall.getGrid()) {
+            for (Cell cell : row) {
+                if (cell.getState() == CellState.INFECTED
+                        && cell.getMoldLevel() >= SPORULATION_THRESHOLD) {
+                    cell.setState(CellState.SPORULATING);
+                }
+            }
+        }
+    }
+
+    private int countCellsByState(Wall wall, CellState state) {
+        int count = 0;
+
+        for (Cell[] row : wall.getGrid()) {
+            for (Cell cell : row) {
+                if (cell.getState() == state) {
+                    count++;
+                }
+            }
+        }
+
+        return count;
+    }
+
+    //Environment factor calculus methods
+
+    private double computeHumiditySuitability(MoldSpecies species) {
+        double humidity = environment.getHumidity();
+
+        if (humidity < species.getMinHumidity()) {
+            return 0.0;
+        }
+
+        double value = (humidity - species.getMinHumidity()) / (100.0 - species.getMinHumidity());
+        return Math.max(0.0, Math.min(1.0, value));
+    }
+
+    private double computeTemperatureSuitability(MoldSpecies species) {
+        double temperature = environment.getTemperature();
+
+        if (temperature < species.getMinTemperature()
+                || temperature > species.getMaxTemperature()) {
+            return 0.0;
+        }
+
+        double tempMid = (species.getMinTemperature() + species.getMaxTemperature()) / 2.0;
+        double tempRange = tempMid - species.getMinTemperature();
+
+        if (tempRange <= 0.0) {
+            return 0.0;
+        }
+
+        double value = 1.0 - Math.abs(temperature - tempMid) / tempRange;
+        return Math.max(0.0, Math.min(1.0, value));
+    }
+
+    private double computeVentilationBlockingFactor() {
+        double ventilation = environment.getVentilation();
+
+        double factor = 1.0 - ventilation / 100.0;
+
+        return Math.max(0.0, Math.min(1.0, factor));
+    }
+
+    //Spore methods
+    private void depositSporesFromSporulating(Wall wall) {
+        MoldSpecies species = MoldSpecies.CLADOSPORIUM;
+
+        int totalCells = wall.getWidth() * wall.getHeight();
+
+        if (totalCells <= 0) {
+            return;
+        }
+
+        int sporulatingCount = countCellsByState(wall, CellState.SPORULATING);
+
+        double sporulatingRatio = (double) sporulatingCount / totalCells;
+
+        double sporePressure = 1.0 - Math.exp(-8.0 * sporulatingRatio);
+
+        double humidityFactor = computeHumiditySuitability(species);
+        double temperatureFactor = computeTemperatureSuitability(species);
+        double ventilationFactor = computeVentilationBlockingFactor();
+
+        double environmentalSuitability =
+                humidityFactor
+                * temperatureFactor
+                * ventilationFactor;
+
+        double probability =
+                environmentalSuitability
+                * (
+                    BASE_EXTERNAL_SPORE_DEPOSITION
+                    + BASE_INTERNAL_SPORE_DEPOSITION * sporePressure
+                );
+
+        for (Cell[] row : wall.getGrid()) {
+            for (Cell cell : row) {
+                if (cell.getState() == CellState.HEALTHY) {
+                    if (random.nextDouble() < probability) {
+                        cell.setState(CellState.DEPOSITED_SPORE);
+                        cell.setSpecies(species);
+                        cell.setMoldLevel(0.0);
+                        cell.setAge(0);
+                    }
+                }
+            }
+        }
+    }
+
+    private void updateDepositedSpores(Wall wall) {
+        MoldSpecies species = MoldSpecies.CLADOSPORIUM;
+
+        double humidityFactor = computeHumiditySuitability(species);
+        double temperatureFactor = computeTemperatureSuitability(species);
+        double ventilationFactor = computeVentilationBlockingFactor();
+
+        for (Cell[] row : wall.getGrid()) {
+            for (Cell cell : row) {
+                if (cell.getState() != CellState.DEPOSITED_SPORE) {
+                    continue;
+                }
+
+                double materialFactor = getMaterialFactor(
+                    cell.getWallMaterial(),
+                    wall.getMaterial()
+                );
+
+                double germinationProbability =
+                        BASE_SPORE_GERMINATION
+                        * humidityFactor
+                        * temperatureFactor
+                        * ventilationFactor
+                        * materialFactor;
+
+                if (random.nextDouble() < germinationProbability) {
+                    cell.infect(species);
+                    continue;
+                }
+
+                double ventilation = environment.getVentilation();
+
+                double removalProbability =
+                        0.02
+                        + 0.15 * (ventilation / 100.0)
+                        + 0.10 * (1.0 - humidityFactor);
+
+                removalProbability = Math.max(0.0, Math.min(1.0, removalProbability));
+
+                if (random.nextDouble() < removalProbability) {
+                    cell.setState(CellState.HEALTHY);
+                    cell.setSpecies(null);
+                    cell.setMoldLevel(0.0);
+                    cell.setAge(0);
+                }
+            }
+        }
+    }
+
+    private void killOldMoldCells(Wall wall) {
+        for (Cell[] row : wall.getGrid()) {
+            for (Cell cell : row) {
+                if (!isActiveMold(cell)) {
+                    continue;
+                }
+
+                // Strictement aucune mort avant 104 semaines
+                if (cell.getAge() < MIN_ACTIVE_MOLD_AGE_BEFORE_DEATH) {
+                    continue;
+                }
+
+                double ageFactor =
+                        (cell.getAge() - MIN_ACTIVE_MOLD_AGE_BEFORE_DEATH) / 20.0;
+
+                double moldLevelFactor = 0.0;
+
+                if (cell.getMoldLevel() >= CRITICAL_MOLD_LEVEL) {
+                    moldLevelFactor = (cell.getMoldLevel() - CRITICAL_MOLD_LEVEL)
+                            / (100.0 - CRITICAL_MOLD_LEVEL);
+                }
+
+                double dryEnvironmentFactor = 0.0;
+
+                if (environment.getHumidity() < 50.0) {
+                    dryEnvironmentFactor = 0.08;
+                }
+
+                double deathProbability =
+                        BASE_MOLD_DEATH_PROBABILITY
+                        + 0.08 * ageFactor
+                        + 0.10 * moldLevelFactor
+                        + dryEnvironmentFactor;
+
+                deathProbability = Math.max(0.0, Math.min(1.0, deathProbability));
+
+                if (random.nextDouble() < deathProbability) {
+                    cell.kill();
+                }
+            }
+        }
+    }
 
     public void setCurrentWeek(int week) {
         this.currentWeek = week;
