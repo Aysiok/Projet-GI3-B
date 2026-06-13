@@ -120,19 +120,29 @@ public class GridController {
         });
 
         mainView.getTreatShelfButton().setOnAction(e -> {
+            gridView.setInteractionMode(InteractionMode.NONE);
+            updateModeButtons();
             pendingEvent = ExternalEvent.ANTI_MOLD_TREATMENT_SHELF;
             mainView.getStatusLabel().setText("Click on a shelf to treat it.");
         });
 
         mainView.getAddMoldButton().setOnAction(e -> {
-            gridView.setInteractionMode(InteractionMode.ADD_MOLD);
-            mainView.getStatusLabel().setText("Draw mode: Mold — left click to paint, right click to erase.");
+            if (gridView.getInteractionMode() == InteractionMode.ADD_MOLD) {
+                gridView.setInteractionMode(InteractionMode.NONE);
+            } else {
+                gridView.setInteractionMode(InteractionMode.ADD_MOLD);
+                mainView.getStatusLabel().setText("Draw mode: Mold — left click to paint, right click to erase.");
+            }
             updateModeButtons();
         });
 
         mainView.getTreatWallButton().setOnAction(e -> {
-            gridView.setInteractionMode(InteractionMode.TREAT_WALL);
-            mainView.getStatusLabel().setText("Draw mode: Treatment — left click to treat, right click to erase.");
+            if (gridView.getInteractionMode() == InteractionMode.TREAT_WALL) {
+                gridView.setInteractionMode(InteractionMode.NONE);
+            } else {
+                gridView.setInteractionMode(InteractionMode.TREAT_WALL);
+                mainView.getStatusLabel().setText("Draw mode: Treatment — left click to treat, right click to erase.");
+            }
             updateModeButtons();
         });
 
@@ -212,13 +222,19 @@ public class GridController {
             } else {
                 switch (mode) {
                     case ADD_MOLD -> {
-                        if (isErase) gridView.eraseMold(row, column);
-                        else         gridView.paintMold(row, column);
+                        if (isErase) {
+                            gridView.eraseMold(row, column);
+                        } else {
+                            gridView.paintMold(row, column);
+                        }
                         markCurrentStepAsModified("Cell modified at week " + currentStepIndex + "...");
                     }
                     case TREAT_WALL -> {
-                        if (isErase) gridView.eraseMold(row, column);
-                        else         gridView.paintTreatment(row, column);
+                        if (isErase) {
+                            gridView.unpaintTreatment(row, column);
+                        } else {
+                            gridView.paintTreatment(row, column);
+                        }
                         markCurrentStepAsModified("Treatment applied at week " + currentStepIndex + "...");
                     }
                     case TREAT_SHELF, PLACE_EVENT, NONE -> {}
@@ -229,6 +245,8 @@ public class GridController {
         updateStatistics();
         mainView.updateCurrentLocationLabel(locationContext.getDisplayName());
         mainView.getApplyLocationButton().setOnAction(event -> updateLocationFromInput()); 
+
+        gridView.setInteractionCompleteListener(() -> markCurrentStepAsModified("Draw action at week " + currentStepIndex + "."));
     }
 
     private void markShelvesOnGrid() {

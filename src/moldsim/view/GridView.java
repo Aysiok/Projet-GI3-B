@@ -59,6 +59,8 @@ public class GridView extends Canvas {
     private DrawMode drawMode = DrawMode.POINT;
     private boolean justFinishedRectangle = false;
     private InteractionMode interactionMode = InteractionMode.NONE;
+    private InteractionCompleteListener interactionCompleteListener;
+
 
     // ═════════════════════════════════════════════════════════════════════════
     //  Construction
@@ -101,7 +103,9 @@ public class GridView extends Canvas {
                     }
                 }
             } else if (event.getButton() == MouseButton.SECONDARY) {
-                if (shelfPlacementListener != null && isInside(row, col) && cellType[row][col] != TYPE_WALL) {
+                if (isInside(row, col) && cellClickListener != null && interactionMode != InteractionMode.NONE) {
+                    cellClickListener.onCellClicked(row, col, MouseButton.SECONDARY);
+                } else if (shelfPlacementListener != null && isInside(row, col) && cellType[row][col] != TYPE_WALL) {
                     shelfPlacementListener.onShelfRemoved(row, col);
                 }
             } else if (isInside(row, col) && cellClickListener != null) {
@@ -138,13 +142,13 @@ public class GridView extends Canvas {
                     int cMax = Math.max(dragStartCol, dragCurrentCol);
                     for (int r = rMin; r <= rMax; r++) {
                         for (int c = cMin; c <= cMax; c++) {
-                            if (cellClickListener != null){
-                                cellClickListener.onCellClicked(r, c, MouseButton.PRIMARY);
-                            }
+                            applyInteractionToCell(r, c);
                         }
                     }
                     isDraggingRectangle = false;
                     justFinishedRectangle = true;
+                    if (interactionCompleteListener != null)
+                        interactionCompleteListener.onComplete();
                     draw();
                 }
             }
@@ -198,6 +202,14 @@ public class GridView extends Canvas {
         draw();
     }
 
+    public void applyInteractionToCell(int row, int col) {
+        switch (interactionMode) {
+            case ADD_MOLD  -> paintMold(row, col);
+            case TREAT_WALL -> paintTreatment(row, col);
+            default -> {}
+        }
+    }
+
     // ═════════════════════════════════════════════════════════════════════════
     //  Setters
     // ═════════════════════════════════════════════════════════════════════════
@@ -222,6 +234,10 @@ public class GridView extends Canvas {
 
     public ShelfValue getNextShelfValue() {
         return nextShelfValue;
+    }
+
+    public void setInteractionCompleteListener(InteractionCompleteListener l) {
+        this.interactionCompleteListener = l;
     }
 
     // ═════════════════════════════════════════════════════════════════════════
@@ -426,10 +442,20 @@ public class GridView extends Canvas {
 
     public void eraseMold(int row, int col) {
         if (!isInside(row, col)) return;
-        if (cells[row][col] == INFECTED || cells[row][col] == TREATED) {
+        if (cells[row][col] == INFECTED) {
             cells[row][col] = HEALTHY;
             Cell cell = modelGrid.getCell(col, row);
             if (cell != null) cell.cure();
+        }
+        draw();
+    }
+
+    public void unpaintTreatment(int row, int col) {
+        if (!isInside(row, col)) return;
+        if (cells[row][col] == TREATED) {
+            cells[row][col] = INFECTED;
+            Cell cell = modelGrid.getCell(col, row);
+            if (cell != null) cell.infect(MoldSpecies.CLADOSPORIUM);
         }
         draw();
     }
@@ -580,9 +606,14 @@ public class GridView extends Canvas {
     public interface ShelfPlacementListener {
         void onShelfPlaced(int row, int col, int width, int height);
         void onShelfRemoved(int row, int col);
-}
+    }
 
-public enum InteractionMode {
-    NONE, ADD_MOLD, TREAT_WALL, TREAT_SHELF, PLACE_EVENT
-}
+    public enum InteractionMode {
+        NONE, ADD_MOLD, TREAT_WALL, TREAT_SHELF, PLACE_EVENT
+    }
+
+    public interface InteractionCompleteListener {
+        void onComplete();
+    }
+
 }
