@@ -1,0 +1,782 @@
+@startuml
+scale 0.65
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+skinparam linetype ortho
+skinparam class {
+    BackgroundColor White
+    BorderColor #3A6EA5
+    HeaderBackgroundColor #D5E8F0
+    ArrowColor #1A3A6B
+}
+skinparam package {
+    BorderColor #1A3A6B
+    FontColor #1A3A6B
+}
+
+' ====================================
+' PACKAGE MODEL
+' ====================================
+
+package "model" {
+
+    enum CellState {
+        HEALTHY
+        DEPOSITED_SPORE
+        INFECTED
+        SPORULATING
+        DEAD
+    }
+
+    enum WallMaterial {
+        CONCRETE
+        WOOD
+        PLASTER
+        BRICK
+        DOCUMENT
+    }
+
+    enum MoldSpecies {
+        CLADOSPORIUM
+        ASPERGILLUS
+        STACHYBOTRYS
+        --
+        -displayName : String
+        -minHumidity : double
+        -minTemperature : double
+        -maxTemperature : double
+        -infectionProbability : double
+        -moldGrowthPerStep : double
+        --
+        +canSurvive(humidity:double, temperature:double) : boolean
+        +getDisplayName() : String
+        +getMinHumidity() : double
+        +getMinTemperature() : double
+        +getMaxTemperature() : double
+        +getInfectionProbability() : double
+        +getMoldGrowthPerStep() : double
+    }
+
+    enum ShelfValue {
+        LOW
+        MEDIUM
+        HIGH
+        CRITICAL
+    }
+
+    enum AlertLevel {
+        LOW
+        MEDIUM
+        HIGH
+        CRITICAL
+    }
+
+    enum EventType {
+        GLOBAL
+        SHELF
+    }
+
+    enum ExternalEvent {
+        WATER_LEAK
+        HVAC_FAILURE
+        WINDOW_OPENED
+        ANTI_MOLD_TREATMENT_WALL
+        ANTI_MOLD_TREATMENT_SHELF
+    }
+
+    class ArchiveRoom {
+        -roomName : String
+        -environment : Environment
+        -northWall : Wall
+        -southWall : Wall
+        -eastWall : Wall
+        -westWall : Wall
+        --
+        +ArchiveRoom(roomName:String, environment:Environment)
+        +getNorthWall() : Wall
+        +setNorthWall(wall:Wall)
+        +getSouthWall() : Wall
+        +setSouthWall(wall:Wall)
+        +getEastWall() : Wall
+        +setEastWall(wall:Wall)
+        +getWestWall() : Wall
+        +setWestWall(wall:Wall)
+        +getEnvironment() : Environment
+        +getRoomName() : String
+        +setRoomName(name:String)
+        +setEnvironment(env:Environment)
+    }
+
+    class Environment {
+        -humidity : double
+        -temperature : double
+        -ventilation : double
+        --
+        +Environment()
+        +getHumidity() : double
+        +getTemperature() : double
+        +getVentilation() : double
+        +setHumidity(v:double)
+        +setTemperature(v:double)
+        +setVentilation(v:double)
+        -clamp(value:double) : double
+    }
+
+    class Wall {
+        -width : int
+        -height : int
+        -grid : Cell[][]
+        -material : WallMaterial
+        --
+        +Wall(width:int, height:int, material:WallMaterial)
+        +Wall(width:int, height:int)
+        +getCell(x:int, y:int) : Cell
+        +getNeighbors(x:int, y:int) : List<Cell>
+        +getNeighbors(cell:Cell) : List<Cell>
+        +randomlyInfect(count:int, species:MoldSpecies, random:Random)
+        +reset()
+        +inBounds(x:int, y:int) : boolean
+        +getWidth() : int
+        +getHeight() : int
+        +getGrid() : Cell[][]
+        +getMaterial() : WallMaterial
+        +setMaterial(material:WallMaterial)
+        +getContaminationRate() : double
+    }
+
+    class Cell {
+        -x : int
+        -y : int
+        -moldLevel : double
+        -age : int
+        -state : CellState
+        -species : MoldSpecies
+        -wallMaterial : WallMaterial
+        --
+        +Cell(x:int, y:int)
+        +isInfected() : boolean
+        +isAlive() : boolean
+        +infect(species:MoldSpecies)
+        +kill()
+        +cure()
+        +incrementAge()
+        +getX() : int
+        +getY() : int
+        +getMoldLevel() : double
+        +setMoldLevel(v:double)
+        +getAge() : int
+        +setAge(v:int)
+        +getState() : CellState
+        +setState(state:CellState)
+        +getSpecies() : MoldSpecies
+        +setSpecies(species:MoldSpecies)
+        +getWallMaterial() : WallMaterial
+        +setWallMaterial(m:WallMaterial)
+        -clamp(value:double) : double
+    }
+
+    class Shelf {
+        -id : String
+        -x : int
+        -y : int
+        -width : int
+        -height : int
+        -plankCount : int
+        -value : ShelfValue
+        --
+        +Shelf(id:String, x:int, y:int, width:int, height:int, plankCount:int, value:ShelfValue)
+        +getId() : String
+        +getX() : int
+        +getY() : int
+        +getWidth() : int
+        +getHeight() : int
+        +getPlankCount() : int
+        +getValue() : ShelfValue
+        +setValue(value:ShelfValue)
+    }
+
+    class MoldSensor {
+        -{static} THRESHOLD_MEDIUM : double
+        -{static} THRESHOLD_HIGH : double
+        -{static} THRESHOLD_CRITICAL : double
+        -wall : Wall
+        -shelves : List<Shelf>
+        -lastAlertLevel : AlertLevel
+        -shelfAlertLevels : Map<String, AlertLevel>
+        --
+        +MoldSensor(wall:Wall, shelves:List<Shelf>)
+        +MoldSensor(wall:Wall)
+        +measure() : double
+        +toAlertLevel(rate:double) : AlertLevel
+        +poll(currentWeek:int) : List<SensorEvent>
+        +getWall() : Wall
+        +getLastAlertLevel() : AlertLevel
+        -checkShelves(currentWeek:int, rate:double) : List<SensorEvent>
+        -emitIfEscalated(shelf:Shelf, level:AlertLevel, currentWeek:int, events:List, rate:double)
+        -isSensitive(shelf:Shelf) : boolean
+        -getShelfAt(x:int, y:int) : Shelf
+    }
+
+    class SensorEvent {
+        -week : int
+        -alertLevel : AlertLevel
+        -moldRate : double
+        -wall : Wall
+        -type : EventType
+        -shelf : Shelf
+        --
+        +SensorEvent(week:int, alertLevel:AlertLevel, moldRate:double, wall:Wall, type:EventType, shelf:Shelf)
+        +SensorEvent(week:int, alertLevel:AlertLevel, moldRate:double, wall:Wall)
+        +getWeek() : int
+        +getAlertLevel() : AlertLevel
+        +getMoldRate() : double
+        +getWall() : Wall
+        +getType() : EventType
+        +getShelf() : Shelf
+    }
+
+    class Statistics {
+        -totalCells : int
+        -healthyCells : int
+        -infectedCells : int
+        -deadCells : int
+        -averageAge : double
+        -averageMoldLevel : double
+        -maxMoldLevel : double
+        -minMoldLevel : double
+        -previousInfectedCells : int
+        --
+        +Statistics(wall:Wall, previousInfectedCells:int)
+        +getTrend() : String
+        +getTotalCells() : int
+        +getHealthyCells() : int
+        +getInfectedCells() : int
+        +getDeadCells() : int
+        +getAverageAge() : double
+        +getAverageMoldLevel() : double
+        +getMaxMoldLevel() : double
+        +getMinMoldLevel() : double
+    }
+
+    class SimulationSnapshot {
+        -week : int
+        -wallCellStates : List<int[][]>
+        -humidity : double
+        -temperature : double
+        -ventilation : double
+        -material : WallMaterial
+        -alertLogs : List<String>
+        --
+        +SimulationSnapshot(week:int, wallCellStates:List, humidity:double, temperature:double, ventilation:double, material:WallMaterial)
+        +SimulationSnapshot(week:int, wallCellStates:List, humidity:double, temperature:double, ventilation:double, material:WallMaterial, alertLogs:List)
+        +getWeek() : int
+        +getWallCellStates() : List<int[][]>
+        +getCellStates() : int[][]
+        +getHumidity() : double
+        +getTemperature() : double
+        +getVentilation() : double
+        +getMaterial() : WallMaterial
+        +getAlertLogs() : List<String>
+        -deepCopyWallStates(source:List) : List
+        -deepCopy(source:int[][]) : int[][]
+    }
+
+    class SimulationState {
+        -wallContexts : List<WallContext>
+        -humidity : double
+        -temperature : double
+        -ventilation : double
+        -step : int
+        -history : List<SimulationSnapshot>
+        --
+        +SimulationState(wallContexts:List, env:Environment, step:int, history:List)
+        +getWallContexts() : List<WallContext>
+        +getHumidity() : double
+        +getTemperature() : double
+        +getVentilation() : double
+        +getStep() : int
+        +getHistory() : List<SimulationSnapshot>
+    }
+
+    class BinaryExporter {
+        +{static} save(state:SimulationState, filePath:String)
+        +{static} load(filePath:String) : SimulationState
+    }
+
+    class LocationContext {
+        -roomName : String
+        -wallName : String
+        --
+        +LocationContext(roomName:String, wallName:String)
+        +getRoomName() : String
+        +getWallName() : String
+        +setRoomName(name:String)
+        +setWallName(name:String)
+        +getDisplayName() : String
+    }
+
+    class RecommendationEngine {
+        -room : ArchiveRoom
+        --
+        +RecommendationEngine(room:ArchiveRoom)
+        +analyze(event:SensorEvent) : List<String>
+        -analyzeGlobal(event:SensorEvent) : List<String>
+        -analyzeShelf(event:SensorEvent) : List<String>
+        -getWallName(wall:Wall) : String
+        -format(rate:double) : String
+    }
+
+    class PdfExporter {
+        +{static} export(stats:List<Statistics>, env:Environment, allLogs:List<List<String>>, filePath:String)
+    }
+
+    class EventManager {
+        -environment : Environment
+        --
+        +EventManager(environment:Environment)
+        +apply(event:ExternalEvent, wall:Wall, x:int, y:int, radius:int)
+        +treatShelf(wall:Wall, shelf:Shelf)
+    }
+
+    class GridScale {
+        +{static} CELLS_PER_METER : int
+        +{static} METERS_PER_CELL : double
+        +{static} CENTIMETERS_PER_CELL : int
+        --
+        +{static} metersToCells(meters:double) : int
+        +{static} cellsToMeters(cells:int) : double
+        +{static} parseMeters(text:String) : double
+        +{static} getScaleDescription() : String
+    }
+
+    class WallManager {
+        -walls : List<WallContext>
+        -currentWallIndex : int
+        --
+        +WallManager()
+        +addWall(wallContext:WallContext)
+        +getCurrentWallContext() : WallContext
+        +getPreviousWallContext() : WallContext
+        +getNextWallContext() : WallContext
+        +moveToPreviousWall()
+        +moveToNextWall()
+        +getWalls() : List<WallContext>
+        +getCurrentWallIndex() : int
+    }
+}
+
+' ====================================
+' PACKAGE CONTROLLER
+' ====================================
+
+package "controller" {
+
+    class SimulationController {
+        -room : ArchiveRoom
+        -sensors : List<MoldSensor>
+        -alertController : AlertController
+        -environment : Environment
+        -random : Random
+        -shelvesByWall : Map<Wall, List<Shelf>>
+        -eventManager : EventManager
+        -currentWeek : int
+        --
+        +SimulationController(room:ArchiveRoom, shelvesByWall:Map, environment:Environment)
+        +SimulationController(wall:Wall, environment:Environment)
+        +step()
+        +computeInfectionProbability(neighbor:Cell, species:MoldSpecies, material:WallMaterial) : double
+        +getCurrentWeek() : int
+        +setCurrentWeek(week:int)
+        +getAlertController() : AlertController
+        +getHistory() : List<SensorEvent>
+        +getEventManager() : EventManager
+        +updateShelves(shelves:List<Shelf>)
+        +resetSensors()
+        +setDisplayName(name:String)
+        -initSensors(shelvesByWall:Map)
+        -propagateOnWall(wall:Wall)
+        -getMaterialFactor(cellMaterial:WallMaterial, wallMaterial:WallMaterial) : double
+        -pollSensors()
+        -isActiveMold(cell:Cell) : boolean
+        -matureInfectedCells(wall:Wall)
+        -updateDepositedSpores(wall:Wall)
+        -killOldMoldCells(wall:Wall)
+    }
+
+    class AlertController {
+        -history : List<SensorEvent>
+        -recommendationEngine : RecommendationEngine
+        -contextName : String
+        --
+        +AlertController()
+        +setRecommendationEngine(engine:RecommendationEngine)
+        +getRecommendationEngine() : RecommendationEngine
+        +handle(event:SensorEvent)
+        +setContextName(name:String)
+        +clearHistory()
+        +getHistory() : List<SensorEvent>
+    }
+
+    class WallContext {
+        -name : String
+        -wall : Wall
+        -shelves : List<Shelf>
+        -simulationController : SimulationController
+        --
+        +WallContext(name:String, width:int, height:int, material:WallMaterial, environment:Environment)
+        +getName() : String
+        +getWall() : Wall
+        +getShelves() : List<Shelf>
+        +getSimulationController() : SimulationController
+        +setName(name:String)
+        +rebuildController(environment:Environment)
+    }
+
+    interface AlertLogger {
+        +log(message:String)
+    }
+
+    class PdfExportService {
+        +export(history:List<SimulationSnapshot>, walls:List<WallContext>, environment:Environment, alertSource:SimulationController) : String
+        +openFile(filePath:String)
+        -restoreAllWallsFromSnapshot(snapshot:SimulationSnapshot, walls:List<WallContext>)
+        -restoreWallState(wall:Wall, savedState:int[][])
+    }
+
+    class GridController {
+        -mainView : MainView
+        -gridView : GridView
+        -shelves : List<Shelf>
+        -locationContext : LocationContext
+        -history : List<SimulationSnapshot>
+        -currentStepIndex : int
+        -modelGrid : Wall
+        -environment : Environment
+        -simulation : SimulationController
+        -wallManager : WallManager
+        -pendingEvent : ExternalEvent
+        -previousMode : InteractionMode
+        -isRunning : boolean
+        -updatingTimeSlider : boolean
+        -updatingControls : boolean
+        -wallConfigs : WallConfig[]
+        -simulationTimer : Timeline
+        --
+        +GridController(mainView:MainView)
+        +GridController(mainView:MainView, configs:WallConfig[])
+        +GridController(mainView:MainView, northWall:Wall)
+        +initialize()
+    }
+}
+
+' ====================================
+' PACKAGE VIEW
+' ====================================
+
+package "view" {
+
+    class MainView {
+        -humiditySlider : Slider
+        -temperatureSlider : Slider
+        -ventilationSlider : Slider
+        -materialComboBox : ComboBox<String>
+        -speciesComboBox : ComboBox<String>
+        -drawToolComboBox : ComboBox<String>
+        -alertLogView : ListView<String>
+        -eventRadiusSlider : Slider
+        -playButton : Button
+        -pauseButton : Button
+        -resetButton : Button
+        -stepButton : Button
+        -exportPdfButton : Button
+        -saveButton : Button
+        -loadButton : Button
+        -speedSlider : Slider
+        -previousStepButton : Button
+        -timeSlider : Slider
+        -newShelfButton : Button
+        -waterLeakButton : Button
+        -hvacFailureButton : Button
+        -windowOpenedButton : Button
+        -treatWallButton : Button
+        -treatShelfButton : Button
+        -addMoldButton : Button
+        -previousWallButton : Button
+        -nextWallButton : Button
+        -statusLabel : Label
+        -infectedLabel : Label
+        -riskLabel : Label
+        -weekLabel : Label
+        -currentLocationLabel : Label
+        -leftWallNameLabel : Label
+        -roomNameField : TextField
+        -wallNameField : TextField
+        -applyLocationButton : Button
+        -gridView : GridView
+        -leftWallPreview : WallPreviewView
+        -rightWallPreview : WallPreviewView
+        --
+        +MainView()
+        +getHumiditySlider() : Slider
+        +getTemperatureSlider() : Slider
+        +getVentilationSlider() : Slider
+        +getSpeedSlider() : Slider
+        +getMaterialComboBox() : ComboBox<String>
+        +getSpeciesComboBox() : ComboBox<String>
+        +getDrawToolComboBox() : ComboBox<String>
+        +getAlertLogView() : ListView<String>
+        +getEventRadiusSlider() : Slider
+        +getPlayButton() : Button
+        +getPauseButton() : Button
+        +getResetButton() : Button
+        +getStepButton() : Button
+        +getExportPdfButton() : Button
+        +getSaveButton() : Button
+        +getLoadButton() : Button
+        +getStatusLabel() : Label
+        +getInfectedLabel() : Label
+        +getRiskLabel() : Label
+        +getWeekLabel() : Label
+        +getGridView() : GridView
+        +getPreviousStepButton() : Button
+        +getTimeSlider() : Slider
+        +getNewShelfButton() : Button
+        +getWaterLeakButton() : Button
+        +getHvacFailureButton() : Button
+        +getWindowOpenedButton() : Button
+        +getTreatWallButton() : Button
+        +getTreatShelfButton() : Button
+        +getAddMoldButton() : Button
+        +getPreviousWallButton() : Button
+        +getNextWallButton() : Button
+        +getCurrentLocationLabel() : Label
+        +getRoomNameField() : TextField
+        +getWallNameField() : TextField
+        +getApplyLocationButton() : Button
+        +getLeftWallPreview() : WallPreviewView
+        +getRightWallPreview() : WallPreviewView
+        +updateCurrentLocationLabel(text:String)
+        +updateWallNavigationLabels(prev:String, current:String, next:String)
+    }
+
+    class GridView {
+        +{static} TYPE_WALL : int
+        +{static} TYPE_SHELF : int
+        +{static} TYPE_DOCUMENT : int
+        -rows : int
+        -columns : int
+        -cellSize : double
+        -cells : int[][]
+        -cellType : int[][]
+        -cellValue : ShelfValue[][]
+        -simulation : SimulationController
+        -modelGrid : Wall
+        -placementMode : boolean
+        -drawMode : DrawMode
+        -interactionMode : InteractionMode
+        --
+        +GridView(rows:int, columns:int, cellSize:double)
+        +draw()
+        +stepSimulation()
+        +toggleInfection(row:int, column:int)
+        +reset()
+        +reset(resetValues:boolean)
+        +enablePlacementMode(width:int, height:int)
+        +disablePlacementMode()
+        +setSimulation(simulation:SimulationController, modelGrid:Wall)
+        +setCellType(row:int, col:int, type:int)
+        +setCellValue(row:int, col:int, value:ShelfValue)
+        +setCellClickListener(listener:CellClickListener)
+        +setShelfPlacementListener(listener:ShelfPlacementListener)
+        +setInteractionCompleteListener(l:InteractionCompleteListener)
+        +setDrawMode(mode:DrawMode)
+        +setInteractionMode(mode:InteractionMode)
+        +getInteractionMode() : InteractionMode
+        +syncModelFromView()
+        +syncModelCellFromView(row:int, col:int)
+        +syncViewFromModel()
+        +updateViewFromModel()
+        +clearStructure()
+        +resizeGrid(newRows:int, newColumns:int)
+        +copyGridState() : int[][]
+        +copyCellTypes() : int[][]
+        +restoreGridState(states:int[][])
+        +restoreCellTypes(savedTypes:int[][])
+        +countInfectedCells() : int
+        +paintMold(row:int, col:int)
+        +eraseMold(row:int, col:int)
+        +paintTreatment(row:int, col:int)
+        +unpaintTreatment(row:int, col:int)
+        +getRows() : int
+        +getColumns() : int
+        +setNextShelfValue(value:ShelfValue)
+        +getNextShelfValue() : ShelfValue
+    }
+
+    enum DrawMode {
+        POINT
+        BRUSH
+        RECTANGLE
+    }
+
+    enum InteractionMode {
+        NONE
+        ADD_MOLD
+        TREAT_WALL
+        TREAT_SHELF
+        PLACE_EVENT
+    }
+
+    class WallPreviewView {
+        -previewColumns : int
+        -cellSize : double
+        --
+        +WallPreviewView(rows:int, previewColumns:int, cellSize:double)
+        +drawPreview(wall:Wall, showRightEdge:boolean)
+    }
+
+    class WallConfigDialog {
+        --
+        +showAndWait() : WallConfig[]
+    }
+
+    class "WallConfigDialog.WallConfig" as WallConfig {
+        +material : WallMaterial
+        +width : int
+        +height : int
+        +widthMeters : double
+        +heightMeters : double
+        --
+        +WallConfig(material:WallMaterial, widthMeters:double, heightMeters:double)
+        +WallConfig(material:WallMaterial, width:int, height:int)
+    }
+
+    WallConfigDialog +-- WallConfig
+}
+
+' ====================================
+' PACKAGE APP
+' ====================================
+
+package "app" {
+    class Main {
+        -{static} wallConfigs : WallConfig[]
+        -{static} configShown : boolean
+        --
+        +start(stage:Stage)
+        +{static} main(args:String[])
+    }
+}
+
+' ====================================
+' RELATIONS — MODEL
+' ====================================
+
+ArchiveRoom "1" *-- "1"      Environment       : has
+ArchiveRoom "1" o-- "0..4"   Wall              : contains
+
+Wall      "1" *-- "1..*"     Cell              : contains
+Cell           -->            CellState
+Cell           -->            MoldSpecies
+Cell           -->            WallMaterial
+
+Shelf          -->            ShelfValue
+
+MoldSensor "1" -->  "1"      Wall              : monitors
+MoldSensor "1" -->  "0..*"   Shelf             : watches
+MoldSensor     -->            AlertLevel
+MoldSensor "1" ..>  "0..*"   SensorEvent       : creates
+
+SensorEvent    -->            Wall
+SensorEvent    -->            AlertLevel
+SensorEvent    -->            EventType
+SensorEvent "0..*" --> "0..1" Shelf
+
+Statistics "1" -->  "1"      Wall              : analyzes
+
+RecommendationEngine "1" --> "1"  ArchiveRoom
+RecommendationEngine       ..>     SensorEvent
+
+PdfExporter    ..>            Statistics
+PdfExporter    ..>            Environment
+
+SimulationSnapshot     -->    WallMaterial
+
+SimulationState "1" *-- "1..*"  WallContext     : saves
+SimulationState "1" *-- "0..*"  SimulationSnapshot
+SimulationState        -->       Environment
+
+BinaryExporter         ..>       SimulationState
+
+EventManager "1" -->  "1"    Environment
+EventManager           -->    ExternalEvent
+EventManager           ..>    Wall
+EventManager           ..>    Shelf
+
+WallContext  "1" *-- "1"     Wall              : owns
+WallContext  "1" *-- "0..*"  Shelf             : has
+WallContext  "1" --> "1"     SimulationController : owns
+
+WallManager  "1" *-- "1..4"  WallContext       : manages
+
+' ====================================
+' RELATIONS — CONTROLLER
+' ====================================
+
+SimulationController "1" --> "1"     ArchiveRoom
+SimulationController "1" --> "1"     Environment
+SimulationController "1" *-- "1..*"  MoldSensor
+SimulationController "1" *-- "1"     AlertController
+SimulationController "1" --> "1"     EventManager
+SimulationController       ..>       RecommendationEngine : creates
+
+AlertController "1" --> "0..*"  SensorEvent
+AlertController "1" --> "1"     RecommendationEngine
+
+GridController  "1" --> "1"     MainView
+GridController  "1" --> "1"     GridView
+GridController  "1" --> "1"     SimulationController
+GridController  "1" --> "1"     Wall
+GridController  "1" --> "1"     Environment
+GridController  "1" --> "0..*"  Shelf
+GridController  "1" --> "1"     LocationContext
+GridController  "1" --> "0..*"  SimulationSnapshot
+GridController  "1" --> "1"     WallManager
+GridController       -->        ExternalEvent
+GridController  "1" --> "1"     PdfExportService
+
+WallConfigDialog ..> WallMaterial
+WallConfigDialog ..> WallConfig  : creates
+
+PdfExportService ..> SimulationSnapshot
+PdfExportService ..> WallContext
+PdfExportService ..> Environment
+PdfExportService ..> SimulationController
+PdfExportService ..> PdfExporter
+
+AlertController ..|> AlertLogger
+
+' ====================================
+' RELATIONS — VIEW
+' ====================================
+
+MainView "1" *-- "1"     GridView
+MainView "1" *-- "2"     WallPreviewView
+
+GridView       --> "1"   SimulationController
+GridView       --> "1"   Wall
+GridView       -->       ShelfValue
+GridView       -->       DrawMode
+GridView       -->       InteractionMode
+
+WallPreviewView --> "1"  Wall
+
+' ====================================
+' RELATIONS — APP
+' ====================================
+
+Main --> "1"   MainView          : creates
+Main --> "1"   GridController    : creates
+Main ..>       WallConfigDialog  : uses
+
+@enduml
