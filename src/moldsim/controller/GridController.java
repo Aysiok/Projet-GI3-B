@@ -108,15 +108,17 @@ public class GridController {
         });
 
         mainView.getSpeedSlider().valueProperty().addListener((obs, oldVal, newVal) -> {
+            double v = newVal.doubleValue();
+            if (Double.isNaN(v)) {
+                mainView.getSpeedSlider().setValue(oldVal.doubleValue());
+                return;
+            }
+            double speed = Math.max(1.0, Math.min(10.0, v));
             if (isRunning && simulationTimer != null) {
-                double speed = Math.max(0.1, newVal.doubleValue());
                 double delay = Math.max(0.05, 1.1 - (speed / 10.0));
                 simulationTimer.stop();
                 simulationTimer.getKeyFrames().setAll(
-                    new javafx.animation.KeyFrame(
-                        javafx.util.Duration.seconds(delay),
-                        e -> step()
-                    )
+                    new javafx.animation.KeyFrame(javafx.util.Duration.seconds(delay), e -> step())
                 );
                 simulationTimer.play();
             }
@@ -362,7 +364,7 @@ public class GridController {
         if (isRunning) return;
         isRunning = true;
 
-        double speed = Math.max(0.1, Math.min(10.0, mainView.getSpeedSlider().getValue()));
+        double speed = Math.max(1.0, Math.min(10.0, mainView.getSpeedSlider().getValue()));
         double delay = Math.max(0.05, 1.1 - (speed / 10.0));
         
         simulationTimer = new javafx.animation.Timeline(
