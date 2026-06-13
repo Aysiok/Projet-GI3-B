@@ -43,6 +43,10 @@ public class AlertController {
     }
 }
 
+    public void clearHistory() {
+        history.clear();
+    }
+
     public List<SensorEvent> getHistory() {
         return history;
     }

@@ -1,11 +1,14 @@
 package moldsim.model;
 
+import java.io.Serializable;
 import java.util.List;
 
 /**
  * Represents a saved state of the simulation at a given step.
  */
-public class SimulationSnapshot {
+public class SimulationSnapshot implements Serializable{
+
+    private static final long serialVersionUID = 1L;
 
     private final int week;
     private final int[][] cellStates;

@@ -42,18 +42,17 @@ public class GridController {
     }
 
     public void initialize() {
-        modelGrid   = new Wall(gridView.getColumns(), gridView.getRows());
+        modelGrid = new Wall(gridView.getColumns(), gridView.getRows());
         environment = new Environment();
         environment.setHumidity(mainView.getHumiditySlider().getValue());
         environment.setTemperature(mainView.getTemperatureSlider().getValue());
         environment.setVentilation(mainView.getVentilationSlider().getValue());
-        
         ArchiveRoom room = new ArchiveRoom("Archive", environment);
         room.setNorthWall(modelGrid);
         Map<Wall, List<Shelf>> shelvesByWall = new HashMap<>();
         shelvesByWall.put(modelGrid, shelves);
         simulation = new SimulationController(room, shelvesByWall, environment);
-
+        
         gridView.setSimulation(simulation, modelGrid);
 
         mainView.getHumiditySlider().valueProperty().addListener((obs, oldValue, newValue) -> {
@@ -80,20 +79,28 @@ public class GridController {
             }
         });
 
-        // Passe les étagères à la vue pour le rendu
+        mainView.getDrawToolComboBox().valueProperty().addListener((obs, oldVal, newVal) -> {
+            switch (newVal) {
+                case "Brush": gridView.setDrawMode(GridView.DrawMode.BRUSH); break;
+                case "Rectangle": gridView.setDrawMode(GridView.DrawMode.RECTANGLE); break;
+                default: gridView.setDrawMode(GridView.DrawMode.POINT); break;
+            }
+        });
+
         markShelvesOnGrid();
         gridView.draw();
 
         saveCurrentSnapshot();
         updateTimeDisplay();
 
-        // Boutons
         mainView.getPlayButton().setOnAction(event -> play());
         mainView.getPauseButton().setOnAction(event -> pause());
         mainView.getStepButton().setOnAction(event -> step());
         mainView.getResetButton().setOnAction(event -> reset());
         mainView.getNewShelfButton().setOnAction(event -> openNewShelfDialog());
         mainView.getExportPdfButton().setOnAction(event -> exportPdf());
+        mainView.getSaveButton().setOnAction(event -> saveSimulation());
+        mainView.getLoadButton().setOnAction(event -> loadSimulation());
 
         mainView.getWaterLeakButton().setOnAction(e -> {
         pendingEvent = ExternalEvent.WATER_LEAK;
@@ -110,11 +117,6 @@ public class GridController {
             simulation.getEventManager().apply(ExternalEvent.WINDOW_OPENED, modelGrid, 0, 0, 0);
             mainView.getVentilationSlider().setValue(environment.getVentilation());
             markCurrentStepAsModified("Window opened at week " + currentStepIndex + ". Future steps were cleared.");
-        });
-
-        mainView.getTreatWallButton().setOnAction(e -> {
-            pendingEvent = ExternalEvent.ANTI_MOLD_TREATMENT_WALL;
-            mainView.getStatusLabel().setText("Click on the grid to treat a wall zone.");
         });
 
         mainView.getTreatShelfButton().setOnAction(e -> {
@@ -135,48 +137,42 @@ public class GridController {
         });
 
         gridView.setShelfPlacementListener(new GridView.ShelfPlacementListener() {
-        @Override
-        public void onShelfPlaced(int row, int col, int width, int height) {
-            String id = "S" + (shelves.size() + 1);
-            int planks = Math.max(1, height / 5);
-            Shelf shelf = new Shelf(id, col, row, width, height, planks, gridView.getNextShelfValue());
-            shelves.add(shelf);
-            simulation.updateShelves(shelves);
-            markShelvesOnGrid();
-            gridView.syncModelFromView();
-            gridView.draw();
+            @Override
+            public void onShelfPlaced(int row, int col, int width, int height) {
+                String id = "S" + (shelves.size() + 1);
+                int planks = Math.max(1, height / 5);
+                Shelf shelf = new Shelf(id, col, row, width, height, planks, gridView.getNextShelfValue());
+                shelves.add(shelf);
+                simulation.updateShelves(shelves);
+                markShelvesOnGrid();
+                gridView.syncModelFromView();
+                gridView.draw();
+                markCurrentStepAsModified("Shelf " + id + " placed at week " + currentStepIndex + ". Future steps were cleared.");
+            }
 
-            markCurrentStepAsModified("Shelf " + id + " placed at week " + currentStepIndex + ". Future steps were cleared.");
-        }
-
-        @Override
-        public void onShelfRemoved(int row, int col) {
-            shelves.removeIf(shelf ->
-                col >= shelf.getX() && col < shelf.getX() + shelf.getWidth() &&
-                row >= shelf.getY() && row < shelf.getY() + shelf.getHeight()
-            );
-            simulation.updateShelves(shelves);
-            for (int r = 0; r < gridView.getRows(); r++)
-                for (int c = 0; c < gridView.getColumns(); c++) {
-                    gridView.setCellType(r, c, GridView.TYPE_WALL);
-                    gridView.setCellValue(r, c, null);
-                }
-            // Remarque les étagères restantes
-            markShelvesOnGrid();
-            gridView.syncModelFromView();
-            gridView.draw();
-
-            markCurrentStepAsModified("Shelf removed at week " + currentStepIndex + ". Future steps were cleared.");
-        }
-});
+            @Override
+            public void onShelfRemoved(int row, int col) {
+                shelves.removeIf(shelf ->
+                    col >= shelf.getX() && col < shelf.getX() + shelf.getWidth() &&
+                    row >= shelf.getY() && row < shelf.getY() + shelf.getHeight()
+                );
+                for (int r = 0; r < gridView.getRows(); r++)
+                    for (int c = 0; c < gridView.getColumns(); c++) {
+                        gridView.setCellType(r, c, GridView.TYPE_WALL);
+                        gridView.setCellValue(r, c, null);
+                    }
+                simulation.updateShelves(shelves);
+                markShelvesOnGrid();
+                gridView.syncModelFromView();
+                gridView.draw();
+                markCurrentStepAsModified("Shelf removed at week " + currentStepIndex + ". Future steps were cleared.");
+            }
+        });
         
         mainView.getPreviousStepButton().setOnAction(event -> previousStep());
 
         mainView.getTimeSlider().valueProperty().addListener((obs, oldValue, newValue) -> {
-            if (updatingTimeSlider) {
-                return;
-            }
-
+            if (updatingTimeSlider) return;
             int targetIndex = newValue.intValue();
             goToStep(targetIndex);
         });
@@ -213,25 +209,25 @@ public class GridController {
                     default -> {}
                 }
                 pendingEvent = null;
-            } 
-            switch (mode) {
-                case ADD_MOLD -> {
-                    if (isErase) gridView.eraseMold(row, column);
-                    else         gridView.paintMold(row, column);
-                    markCurrentStepAsModified("Cell modified at week " + currentStepIndex + "...");
+            } else {
+                switch (mode) {
+                    case ADD_MOLD -> {
+                        if (isErase) gridView.eraseMold(row, column);
+                        else         gridView.paintMold(row, column);
+                        markCurrentStepAsModified("Cell modified at week " + currentStepIndex + "...");
+                    }
+                    case TREAT_WALL -> {
+                        if (isErase) gridView.eraseMold(row, column);
+                        else         gridView.paintTreatment(row, column);
+                        markCurrentStepAsModified("Treatment applied at week " + currentStepIndex + "...");
+                    }
+                    case TREAT_SHELF, PLACE_EVENT, NONE -> {}
                 }
-                case TREAT_WALL -> {
-                    if (isErase) gridView.eraseMold(row, column);
-                    else         gridView.paintTreatment(row, column);
-                    markCurrentStepAsModified("Treatment applied at week " + currentStepIndex + "...");
-                }
-                case TREAT_SHELF, PLACE_EVENT, NONE -> {}
             }
         });
 
         updateStatistics();
         mainView.updateCurrentLocationLabel(locationContext.getDisplayName());
-
         mainView.getApplyLocationButton().setOnAction(event -> updateLocationFromInput()); 
     }
 
@@ -244,29 +240,25 @@ public class GridController {
             int planks = shelf.getPlankCount();
             double plankSpacing = (double) h / (planks + 1);
         
-                    // Planches = bois
             for (int p = 0; p < planks; p++) {
                 int plankRow = startY + (int) ((p + 1) * plankSpacing);
                 for (int col = startX; col < startX + w; col++) {
                     gridView.setCellType(plankRow, col, GridView.TYPE_SHELF);
-                    moldsim.model.Cell cell = modelGrid.getCell(col, plankRow);
-                    if (cell != null) cell.setWallMaterial(moldsim.model.WallMaterial.WOOD);
+                    Cell cell = modelGrid.getCell(col, plankRow);
+                    if (cell != null) cell.setWallMaterial(WallMaterial.WOOD);
                 }
             }
 
-            // Espaces entre planches = documents
             for (int p = 0; p < planks; p++) {
                 int plankRow     = startY + (int) ((p + 1) * plankSpacing);
-                int prevPlankRow = p == 0
-                    ? startY
-                    : startY + (int) (p * plankSpacing);
+                int prevPlankRow = p == 0 ? startY : startY + (int) (p * plankSpacing);
 
                 for (int row = prevPlankRow + 1; row < plankRow; row++) {
                     for (int col = startX; col < startX + w; col++) {
                         gridView.setCellType(row, col, GridView.TYPE_DOCUMENT);
                         gridView.setCellValue(row, col, shelf.getValue());
-                        moldsim.model.Cell cell = modelGrid.getCell(col, row);
-                        if (cell != null) cell.setWallMaterial(moldsim.model.WallMaterial.DOCUMENT);
+                        Cell cell = modelGrid.getCell(col, row);
+                        if (cell != null) cell.setWallMaterial(WallMaterial.DOCUMENT);
                     }
                 }
             }
@@ -282,11 +274,8 @@ public class GridController {
     }
 
     private void step() {
-        if (currentStepIndex < history.size() - 1) {
-            goToStep(currentStepIndex + 1);
-        } else {
-            advanceOneNewStep();
-        }
+        if (currentStepIndex < history.size() - 1) goToStep(currentStepIndex + 1);
+        else advanceOneNewStep();
     }
 
     private void previousStep() {
@@ -294,10 +283,8 @@ public class GridController {
             mainView.getStatusLabel().setText("Already at initial step.");
             return;
         }
-
         goToStep(currentStepIndex - 1);
     }
-
 
     private void reset() {
         currentStepIndex = 0;
@@ -315,41 +302,34 @@ public class GridController {
 
     private void updateStatistics() {
         int infected = gridView.countInfectedCells();
-        int total    = gridView.getRows() * gridView.getColumns();
-        double pct   = total > 0 ? infected * 100.0 / total : 0.0;
+        int total = gridView.getRows() * gridView.getColumns();
+        double pct = total > 0 ? infected * 100.0 / total : 0.0;
 
-        mainView.getInfectedLabel().setText(
-            String.format("Infected: %d (%.1f%%)", infected, pct));
+        mainView.getInfectedLabel().setText(String.format("Infected: %d (%.1f%%)", infected, pct));
 
-        if (pct < 10) {
+        if (pct < 10){
             mainView.getRiskLabel().setText("Risk: Low");
-        } else if (pct < 30) {
+        }
+        else if(pct < 30){
             mainView.getRiskLabel().setText("Risk: Moderate");
-        } else {
+        }
+        else {
             mainView.getRiskLabel().setText("Risk: High");
         }
     }
-
     private void updateLocationFromInput() {
         String roomName = mainView.getRoomNameField().getText();
         String wallName = mainView.getWallNameField().getText();
-
         locationContext.setRoomName(roomName);
         locationContext.setWallName(wallName);
-
         mainView.updateCurrentLocationLabel(locationContext.getDisplayName());
-
-        mainView.getStatusLabel().setText(
-            "Current location changed to " + locationContext.getDisplayName() + "."
-        );
+        mainView.getStatusLabel().setText("Current location changed to " + locationContext.getDisplayName() + ".");
     }
 
     private void saveCurrentSnapshot() {
         SimulationSnapshot snapshot = createSnapshot(currentStepIndex);
-
         history.add(snapshot);
         currentStepIndex = history.size() - 1;
-
         updateTimeSlider();
     }
 
@@ -357,8 +337,7 @@ public class GridController {
         int week = currentStepIndex;
 
         mainView.getWeekLabel().setText("Time elapsed: " + week + " week(s)");
-        mainView.getStepLabel().setText(
-            "History: " + currentStepIndex + " / " + (history.size() - 1)
+        mainView.getStepLabel().setText("History: " + currentStepIndex + " / " + (history.size() - 1)
         );
     }
 
@@ -368,42 +347,31 @@ public class GridController {
         String moldBase = "-fx-background-color: #3A7A3A; -fx-text-fill: white;";
         String treatBase= "-fx-background-color: #5A3A7A; -fx-text-fill: white;";
 
-        mainView.getAddMoldButton().setStyle(
-            mode == InteractionMode.ADD_MOLD ? active : moldBase);
-        mainView.getTreatWallButton().setStyle(
-            mode == InteractionMode.TREAT_WALL ? active : treatBase);
+        mainView.getAddMoldButton().setStyle(mode == InteractionMode.ADD_MOLD ? active : moldBase);
+        mainView.getTreatWallButton().setStyle(mode == InteractionMode.TREAT_WALL ? active : treatBase);
     }
 
     private void goToStep(int targetIndex) {
-        if (targetIndex < 0 || targetIndex >= history.size()) {
-            return;
-        }
-
+        if (targetIndex < 0 || targetIndex >= history.size()) return;
         currentStepIndex = targetIndex;
         SimulationSnapshot snapshot = history.get(currentStepIndex);
-
         gridView.restoreGridState(snapshot.getCellStates());
         restoreEnvironmentFromSnapshot(snapshot);
         simulation.resetSensors();
-
         updateStatistics();
         updateTimeDisplay();
         updateTimeSlider();
-
         mainView.getStatusLabel().setText("Moved to week " + snapshot.getWeek() + ".");
     }
 
     private void markCurrentStepAsModified(String message) {
         replaceCurrentSnapshot();
-
         if (currentStepIndex < history.size() - 1) {
             history = new ArrayList<>(history.subList(0, currentStepIndex + 1));
         }
-
         updateStatistics();
         updateTimeDisplay();
         updateTimeSlider();
-
         mainView.getStatusLabel().setText(message);
     }
 
@@ -413,8 +381,12 @@ public class GridController {
     }
 
     private void exportPdf() {
-        List<moldsim.model.Statistics> statsList = new ArrayList<>();
-        List<java.util.List<String>> allLogs = new ArrayList<>();
+        if (history.isEmpty()) {
+            mainView.getStatusLabel().setText("No simulation data to export.");
+            return;
+        }
+        List<Statistics> statsList = new ArrayList<>();
+        List<List<String>> allLogs = new ArrayList<>();
         int previousInfected = 0;
         for (SimulationSnapshot snap : history) {
             gridView.restoreGridState(snap.getCellStates()); // pour lire l'état
@@ -443,36 +415,29 @@ public class GridController {
     private void advanceOneNewStep() {
         gridView.syncModelFromView();
         gridView.stepSimulation();
-
         int nextWeek = currentStepIndex + 1;
-
         history.add(createSnapshot(nextWeek));
         currentStepIndex = history.size() - 1;
-
         updateStatistics();
         updateTimeDisplay();
         updateTimeSlider();
-
         mainView.getStatusLabel().setText("Advanced to week " + nextWeek + ".");
     }
 
     private void updateTimeSlider() {
         updatingTimeSlider = true;
-
         int maxIndex = Math.max(0, history.size() - 1);
-
         mainView.getTimeSlider().setMax(maxIndex);
         mainView.getTimeSlider().setValue(currentStepIndex);
-
         updatingTimeSlider = false;
     }
+
     private void openNewShelfDialog() {
         javafx.scene.control.Dialog<int[]> dialog = new javafx.scene.control.Dialog<>();
         dialog.setTitle("New Shelf");
         dialog.setHeaderText("Enter shelf dimensions (in cells)");
 
-        javafx.scene.control.ButtonType okButton =
-            new javafx.scene.control.ButtonType("Place", javafx.scene.control.ButtonBar.ButtonData.OK_DONE);
+        javafx.scene.control.ButtonType okButton = new javafx.scene.control.ButtonType("Place", javafx.scene.control.ButtonBar.ButtonData.OK_DONE);
         dialog.getDialogPane().getButtonTypes().addAll(okButton, javafx.scene.control.ButtonType.CANCEL);
 
         javafx.scene.layout.GridPane grid = new javafx.scene.layout.GridPane();
@@ -499,7 +464,6 @@ public class GridController {
                 try {
                     int w = Integer.parseInt(widthField.getText().trim());
                     int h = Integer.parseInt(heightField.getText().trim());
-                    // stocke la valeur choisie
                     return new int[]{w, h};
                 } catch (NumberFormatException e) {
                     return null;
@@ -510,7 +474,6 @@ public class GridController {
 
         dialog.showAndWait().ifPresent(dims -> {
             if (dims != null) {
-                // Récupère la valeur patrimoniale choisie
                 ShelfValue chosenValue = switch (valueBox.getValue()) {
                     case "LOW"      -> ShelfValue.LOW;
                     case "HIGH"     -> ShelfValue.HIGH;
@@ -518,22 +481,15 @@ public class GridController {
                     default         -> ShelfValue.MEDIUM;
                 };
                 gridView.enablePlacementMode(dims[0], dims[1]);
-                // Stocke la valeur pour l'utiliser au placement
                 gridView.setNextShelfValue(chosenValue);
-                mainView.getStatusLabel().setText(
-                    "Click on the grid to place the shelf (" + dims[0] + "x" + dims[1] + ")");
+                mainView.getStatusLabel().setText("Click on the grid to place the shelf (" + dims[0] + "x" + dims[1] + ")");
             }
         });
     }
 
     private void markSimulationParametersChanged(String parameterName) {
-        if (updatingControls) {
-            return;
-        }
-
-        markCurrentStepAsModified(
-            parameterName + " changed at week " + currentStepIndex + ". Future steps were cleared."
-        );
+        if (updatingControls) return;
+        markCurrentStepAsModified(parameterName + " changed at week " + currentStepIndex + ". Future steps were cleared.");
     }
 
     private SimulationSnapshot createSnapshot(int week) {
@@ -546,12 +502,10 @@ public class GridController {
 
     private void restoreEnvironmentFromSnapshot(SimulationSnapshot snapshot) {
         updatingControls = true;
-
         mainView.getHumiditySlider().setValue(snapshot.getHumidity());
         mainView.getTemperatureSlider().setValue(snapshot.getTemperature());
         mainView.getVentilationSlider().setValue(snapshot.getVentilation());
         mainView.getMaterialComboBox().setValue(toMaterialLabel(snapshot.getMaterial()));
-
         updatingControls = false;
 
         environment.setHumidity(snapshot.getHumidity());
@@ -560,7 +514,7 @@ public class GridController {
         modelGrid.setMaterial(snapshot.getMaterial());
     }
 
-    private String toMaterialLabel(moldsim.model.WallMaterial material) {
+    private String toMaterialLabel(WallMaterial material) {
         switch (material) {
             case CONCRETE: return "Concrete";
             case WOOD:     return "Wood";
@@ -570,14 +524,74 @@ public class GridController {
         }
     }
 
-    private moldsim.model.WallMaterial toWallMaterial(String label) {
+    private WallMaterial toWallMaterial(String label) {
         switch (label) {
-            case "Concrete": return moldsim.model.WallMaterial.CONCRETE;
-            case "Wood":     return moldsim.model.WallMaterial.WOOD;
-            case "Brick":    return moldsim.model.WallMaterial.BRICK;
-            case "Document": return moldsim.model.WallMaterial.DOCUMENT;
-            default:         return moldsim.model.WallMaterial.PLASTER;
+            case "Concrete": return WallMaterial.CONCRETE;
+            case "Wood":     return WallMaterial.WOOD;
+            case "Brick":    return WallMaterial.BRICK;
+            case "Document": return WallMaterial.DOCUMENT;
+            default:         return WallMaterial.PLASTER;
         }
     }
 
+    private void saveSimulation() {
+        int[][] cellStates = gridView.copyGridState();
+        int[][] cellTypes  = gridView.copyCellTypes(); 
+        
+        SimulationState state = new SimulationState(cellStates, cellTypes, shelves, environment, currentStepIndex, history);
+        
+        // Choix du fichier
+        javafx.stage.FileChooser chooser = new javafx.stage.FileChooser();
+        chooser.setTitle("Save Simulation");
+        chooser.getExtensionFilters().add(
+            new javafx.stage.FileChooser.ExtensionFilter("Simulation files", "*.sim"));
+        java.io.File file = chooser.showSaveDialog(mainView.getScene().getWindow());
+        
+        if (file != null) {
+            BinaryExporter.save(state, file.getAbsolutePath());
+            mainView.getStatusLabel().setText("Saved: " + file.getName());
+        }
+    }
+
+   private void loadSimulation() {
+        javafx.stage.FileChooser chooser = new javafx.stage.FileChooser();
+        chooser.setTitle("Load Simulation");
+        chooser.getExtensionFilters().add(
+            new javafx.stage.FileChooser.ExtensionFilter("Simulation files", "*.sim"));
+        java.io.File file = chooser.showOpenDialog(mainView.getScene().getWindow());
+        
+        if (file != null) {
+            SimulationState state = BinaryExporter.load(file.getAbsolutePath());
+            if (state != null) {
+                // Restaure l'environnement
+                environment.setHumidity(state.getHumidity());
+                environment.setTemperature(state.getTemperature());
+                environment.setVentilation(state.getVentilation());
+                mainView.getHumiditySlider().setValue(state.getHumidity());
+                mainView.getTemperatureSlider().setValue(state.getTemperature());
+                mainView.getVentilationSlider().setValue(state.getVentilation());
+
+                // Restaure les étagères
+                shelves.clear();
+                shelves.addAll(state.getShelves());
+
+                // Restaure la grille
+                gridView.restoreGridState(state.getCellStates());
+                gridView.restoreCellTypes(state.getCellTypes());
+                markShelvesOnGrid();
+                gridView.draw();
+
+                // Restaure l'historique
+                history.clear();
+                history.addAll(state.getHistory());
+                currentStepIndex = state.getStep();
+                simulation.setCurrentWeek(currentStepIndex);
+
+                updateTimeDisplay();
+                updateTimeSlider();
+                updateStatistics();
+                mainView.getStatusLabel().setText("Loaded: " + file.getName());
+            }
+        }
+    }
 }

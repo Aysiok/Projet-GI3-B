@@ -138,4 +138,9 @@ public class SimulationController {
         sensors.clear();
         initSensors(shelvesByWall);
     }
+    
+
+    public void setCurrentWeek(int week) {
+        this.currentWeek = week;
+    }
 }
