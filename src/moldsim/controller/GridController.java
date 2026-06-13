@@ -2,9 +2,11 @@ package moldsim.controller;
 
 import moldsim.model.*;
 import moldsim.view.GridView;
-import moldsim.view.GridView.InteractionMode;
+import moldsim.view.InteractionMode;
+import moldsim.view.DrawMode;
 import moldsim.view.MainView;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -27,12 +29,10 @@ public class GridController {
     private ExternalEvent pendingEvent = null;
     private InteractionMode previousMode = InteractionMode.NONE;
     private WallManager wallManager;
+    private final PdfExportService pdfExportService = new PdfExportService();
     
     private boolean updatingTimeSlider;
     private boolean updatingControls;
-
-    private static final double ROOM_EXTERNAL_SPORE_DEPOSITION = 0.00002;
-    private static final double ROOM_INTERNAL_SPORE_DEPOSITION = 0.004;
 
     // Play/Pause timer
     private javafx.animation.Timeline simulationTimer;
@@ -76,6 +76,10 @@ public class GridController {
         createDefaultWalls();
         loadCurrentWallIntoView();
 
+        for (WallContext wc : wallManager.getWalls()) {
+            wc.getSimulationController().getAlertController().setLogger(message -> mainView.getStatusLabel().setText(message));
+        }
+
         mainView.getHumiditySlider().valueProperty().addListener((obs, oldValue, newValue) -> {
             environment.setHumidity(newValue.doubleValue());
             markSimulationParametersChanged("Humidity");
@@ -102,9 +106,9 @@ public class GridController {
 
         mainView.getDrawToolComboBox().valueProperty().addListener((obs, oldVal, newVal) -> {
             switch (newVal) {
-                case "Brush": gridView.setDrawMode(GridView.DrawMode.BRUSH); break;
-                case "Rectangle": gridView.setDrawMode(GridView.DrawMode.RECTANGLE); break;
-                default: gridView.setDrawMode(GridView.DrawMode.POINT); break;
+                case "Brush": gridView.setDrawMode(DrawMode.BRUSH); break;
+                case "Rectangle": gridView.setDrawMode(DrawMode.RECTANGLE); break;
+                default: gridView.setDrawMode(DrawMode.POINT); break;
             }
         });
 
@@ -162,7 +166,7 @@ public class GridController {
 
         mainView.getTreatShelfButton().setOnAction(e -> {
             gridView.setInteractionMode(InteractionMode.NONE);
-            gridView.setDrawMode(GridView.DrawMode.POINT);
+            gridView.setDrawMode(DrawMode.POINT);
             mainView.getDrawToolComboBox().setValue("Point");
             updateModeButtons();
             pendingEvent = ExternalEvent.ANTI_MOLD_TREATMENT_SHELF;
@@ -312,7 +316,10 @@ public class GridController {
         mainView.updateCurrentLocationLabel(locationContext.getDisplayName());
         mainView.getApplyLocationButton().setOnAction(event -> updateLocationFromInput()); 
 
-        gridView.setInteractionCompleteListener(() -> markCurrentStepAsModified("Draw action at week " + currentStepIndex + "."));
+        gridView.setInteractionCompleteListener(() -> {
+            gridView.syncModelFromView();
+            markCurrentStepAsModified("Draw action at week " + currentStepIndex + ".");
+        });    
     }
 
     private void markShelvesOnGrid() {
@@ -546,53 +553,21 @@ public class GridController {
     }
 
     private void exportPdf() {
-    if (history.isEmpty()) {
-        mainView.getStatusLabel().setText("No simulation data to export.");
-        return;
-    }
+        int savedIndex = currentStepIndex;
+        String filePath = pdfExportService.export(history, wallManager.getWalls(), environment, simulation);
 
-    List<moldsim.model.Statistics> statsList = new ArrayList<>();
-    List<List<String>> allLogs = new ArrayList<>();
-    int previousInfected = 0;
-
-    // Sauvegarder l'état courant
-    int savedIndex = currentStepIndex;
-
-    for (SimulationSnapshot snap : history) {
-        // Restaurer chaque mur pour calculer les stats
-        restoreAllWallsFromSnapshot(snap);
-
-        moldsim.model.Statistics stats = new moldsim.model.Statistics(modelGrid, previousInfected);
-        previousInfected = stats.getInfectedCells();
-        statsList.add(stats);
-
-        // Logs d'alerte du snapshot
-        List<String> logs = simulation.getAlertController().getHistory().stream()
-            .filter(e -> e.getWeek() == snap.getWeek())
-            .map(e -> "[" + e.getType() + "] " + e.getAlertLevel() + " — "
-            + (e.getShelf() != null
-             ? "shelf " + e.getShelf().getId()
-             : String.format("rate %.0f%%", e.getMoldRate() * 100)))
-            .collect(java.util.stream.Collectors.toList());
-        allLogs.add(logs);
-    }
-
-    // Restaurer l'état courant
-    goToStep(savedIndex);
-
-    String filePath = "report_" + System.currentTimeMillis() + ".pdf";
-    moldsim.model.PdfExporter.export(statsList, environment, allLogs, filePath);
-    mainView.getStatusLabel().setText("PDF exported: " + filePath);
-
-    try {
-        java.io.File file = new java.io.File(filePath);
-        if (file.exists() && java.awt.Desktop.isDesktopSupported()) {
-            java.awt.Desktop.getDesktop().open(file);
+        goToStep(savedIndex);
+        if (filePath == null) {
+            mainView.getStatusLabel().setText("No simulation data to export.");
+            return;
         }
-    } catch (java.io.IOException e) {
-        mainView.getStatusLabel().setText("PDF exported but could not open: " + e.getMessage());
+        mainView.getStatusLabel().setText("PDF exported: " + filePath);
+        try {
+            pdfExportService.openFile(filePath);
+        } catch (IOException e) {
+            mainView.getStatusLabel().setText("PDF exported but could not open: " + e.getMessage());
+        }
     }
-}
 
     private void advanceOneNewStep() {
         gridView.syncModelFromView();
@@ -600,11 +575,8 @@ public class GridController {
         for (WallContext wallContext : wallManager.getWalls()) {
             wallContext.getSimulationController().step();
         }
-
-        depositSporesAcrossRoom();
-
+        wallManager.getWalls().get(0).getSimulationController().depositSporesAcrossRoom(wallManager.getWalls());
         propagateBetweenAdjacentWalls();
-
         gridView.updateViewFromModel();
 
         int nextWeek = currentStepIndex + 1;
@@ -804,7 +776,7 @@ public class GridController {
         simulation = current.getSimulationController();
 
         gridView.resizeGrid(modelGrid.getHeight(), modelGrid.getWidth());
-        gridView.setSimulation(simulation, modelGrid);
+        gridView.setModelGrid(modelGrid);
 
         gridView.clearStructure();
         gridView.updateViewFromModel();
@@ -1086,116 +1058,6 @@ public class GridController {
         mainView.updateCurrentLocationLabel(locationContext.getDisplayName());
 
         updateWallNavigationView();
-    }
-
-    //Spore methods for room
-
-    private void depositSporesAcrossRoom() {
-        MoldSpecies species = MoldSpecies.CLADOSPORIUM;
-
-        int totalCells = 0;
-        int sporulatingCount = 0;
-
-        for (WallContext wallContext : wallManager.getWalls()) {
-            Wall wall = wallContext.getWall();
-
-            totalCells += wall.getWidth() * wall.getHeight();
-            sporulatingCount += countCellsByState(wall, CellState.SPORULATING);
-        }
-
-        if (totalCells <= 0) {
-            return;
-        }
-
-        double sporulatingRatio = (double) sporulatingCount / totalCells;
-        double sporePressure = 1.0 - Math.exp(-8.0 * sporulatingRatio);
-
-        double humidityFactor = computeHumiditySuitability(species);
-        double temperatureFactor = computeTemperatureSuitability(species);
-        double ventilationFactor = computeVentilationBlockingFactor();
-
-        double environmentalSuitability =
-                humidityFactor
-                * temperatureFactor
-                * ventilationFactor;
-
-        double probability =
-                environmentalSuitability
-                * (
-                    ROOM_EXTERNAL_SPORE_DEPOSITION
-                    + ROOM_INTERNAL_SPORE_DEPOSITION * sporePressure
-                );
-
-        for (WallContext wallContext : wallManager.getWalls()) {
-            depositSporesOnWall(wallContext.getWall(), species, probability);
-        }
-    }
-
-    private void depositSporesOnWall(Wall wall, MoldSpecies species, double probability) {
-        for (Cell[] row : wall.getGrid()) {
-            for (Cell cell : row) {
-                if (cell.getState() == CellState.HEALTHY) {
-                    if (Math.random() < probability) {
-                        cell.setState(CellState.DEPOSITED_SPORE);
-                        cell.setSpecies(species);
-                        cell.setMoldLevel(0.0);
-                        cell.setAge(0);
-                    }
-                }
-            }
-        }
-    }
-
-    private int countCellsByState(Wall wall, CellState state) {
-        int count = 0;
-
-        for (Cell[] row : wall.getGrid()) {
-            for (Cell cell : row) {
-                if (cell.getState() == state) {
-                    count++;
-                }
-            }
-        }
-
-        return count;
-    }
-
-    private double computeHumiditySuitability(MoldSpecies species) {
-        double humidity = environment.getHumidity();
-
-        if (humidity < species.getMinHumidity()) {
-            return 0.0;
-        }
-
-        double value = (humidity - species.getMinHumidity()) / (100.0 - species.getMinHumidity());
-        return Math.max(0.0, Math.min(1.0, value));
-    }
-
-    private double computeTemperatureSuitability(MoldSpecies species) {
-        double temperature = environment.getTemperature();
-
-        if (temperature < species.getMinTemperature()
-                || temperature > species.getMaxTemperature()) {
-            return 0.0;
-        }
-
-        double tempMid = (species.getMinTemperature() + species.getMaxTemperature()) / 2.0;
-        double tempRange = tempMid - species.getMinTemperature();
-
-        if (tempRange <= 0.0) {
-            return 0.0;
-        }
-
-        double value = 1.0 - Math.abs(temperature - tempMid) / tempRange;
-        return Math.max(0.0, Math.min(1.0, value));
-    }
-
-    private double computeVentilationBlockingFactor() {
-        double ventilation = environment.getVentilation();
-
-        double factor = 1.0 - ventilation / 100.0;
-
-        return Math.max(0.0, Math.min(1.0, factor));
     }
 
     private void saveSimulation() {

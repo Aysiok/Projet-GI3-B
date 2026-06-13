@@ -1,9 +1,13 @@
-package moldsim.model;
+package moldsim.controller;
 
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
-import moldsim.controller.SimulationController;
+
+import moldsim.model.Environment;
+import moldsim.model.Shelf;
+import moldsim.model.Wall;
+import moldsim.model.WallMaterial;
 
 public class WallContext implements Serializable{
 

@@ -4,11 +4,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class RecommendationEngine {
+    private String wallName;
 
-    private final ArchiveRoom room;
-
-    public RecommendationEngine(ArchiveRoom room) {
-        this.room = room;
+    public RecommendationEngine(String wallName) {
+         this.wallName = wallName;
     }
 
     public List<String> analyze(SensorEvent event) {
@@ -53,14 +52,14 @@ public class RecommendationEngine {
         return recommendations;
     }
 
-    private String getWallName(Wall wall) {
-        if (wall == room.getNorthWall()) return "North";
-        if (wall == room.getSouthWall()) return "South";
-        if (wall == room.getEastWall())  return "East";
-        if (wall == room.getWestWall())  return "West";
-        return "unknow";
+    public void setWallName(String wallName) {
+        this.wallName = wallName;
     }
 
+    private String getWallName(Wall wall) {
+        return wallName;
+    }
+    
     private String format(double rate) {
         return String.format("%.0f%%", rate * 100);
     }
