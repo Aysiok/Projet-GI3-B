@@ -553,18 +553,43 @@ public class GridController {
     }
 
     private void exportPdf() {
-        int savedIndex = currentStepIndex;
-        String filePath = pdfExportService.export(history, wallManager.getWalls(), environment, simulation);
-
-        goToStep(savedIndex);
-        if (filePath == null) {
+        if (history.isEmpty()) {
             mainView.getStatusLabel().setText("No simulation data to export.");
             return;
         }
+
+        List<moldsim.model.Statistics> statsList = new ArrayList<>();
+        List<List<String>> allLogs = new ArrayList<>();
+        int previousInfected = 0;
+
+        // Sauvegarder l'état courant
+        int savedIndex = currentStepIndex;
+
+        for (SimulationSnapshot snap : history) {
+            // Restaurer chaque mur pour calculer les stats
+            restoreAllWallsFromSnapshot(snap);
+
+            moldsim.model.Statistics stats = new moldsim.model.Statistics(modelGrid, previousInfected);
+            previousInfected = stats.getInfectedCells();
+            statsList.add(stats);
+
+            List<String> logs = new ArrayList<>(snap.getAlertLogs());
+            allLogs.add(logs);
+        }
+
+        // Restaurer l'état courant
+        goToStep(savedIndex);
+
+        String filePath = "report_" + System.currentTimeMillis() + ".pdf";
+        moldsim.model.PdfExporter.export(statsList, environment, allLogs, filePath);
         mainView.getStatusLabel().setText("PDF exported: " + filePath);
+
         try {
-            pdfExportService.openFile(filePath);
-        } catch (IOException e) {
+            java.io.File file = new java.io.File(filePath);
+            if (file.exists() && java.awt.Desktop.isDesktopSupported()) {
+                java.awt.Desktop.getDesktop().open(file);
+            }
+        } catch (java.io.IOException e) {
             mainView.getStatusLabel().setText("PDF exported but could not open: " + e.getMessage());
         }
     }
@@ -692,10 +717,26 @@ public class GridController {
     }
 
     private SimulationSnapshot createSnapshot(int week) {
-        // Important : on sauvegarde d'abord les modifications visibles dans le modèle.
         gridView.syncModelFromView();
-
         List<int[][]> wallStates = copyAllWallStates();
+
+        List<String> logs = simulation.getAlertController().getHistory().stream()
+            .filter(e -> e.getWeek() == week)
+            .map(e -> "Week " + e.getWeek() + " — [" + e.getType() + "] "
+                + e.getAlertLevel()
+                + (e.getShelf() != null
+                    ? " — shelf " + e.getShelf().getId()
+                    : String.format(" — rate %.0f%%", e.getMoldRate() * 100)))
+            .collect(java.util.stream.Collectors.toList());
+
+        if (simulation.getAlertController().getRecommendationEngine() != null) {
+            simulation.getAlertController().getHistory().stream()
+                .filter(e -> e.getWeek() == week)
+                .forEach(e -> simulation.getAlertController()
+                    .getRecommendationEngine()
+                    .analyze(e)
+                    .forEach(r -> logs.add("  → " + r)));
+        }
 
         return new SimulationSnapshot(
             week,
@@ -703,7 +744,8 @@ public class GridController {
             environment.getHumidity(),
             environment.getTemperature(),
             environment.getVentilation(),
-            modelGrid.getMaterial()
+            modelGrid.getMaterial(),
+            logs
         );
     }
 
@@ -1101,6 +1143,15 @@ public class GridController {
                 updateTimeDisplay();
                 updateTimeSlider();
                 updateStatistics();
+                mainView.getAlertLogView().getItems().clear();
+                for (int i = history.size() - 1; i >= 0; i--) {
+                    SimulationSnapshot snap = history.get(i);
+                    if (snap.getAlertLogs() != null) {
+                        for (String log : snap.getAlertLogs()) {
+                            mainView.getAlertLogView().getItems().add(0, log);
+                        }
+                    }
+                }
                 mainView.getStatusLabel().setText("Loaded: " + file.getName());
             }
         }
