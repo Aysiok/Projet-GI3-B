@@ -27,9 +27,11 @@ public class Statistics {
         for (Cell[] row : wall.getGrid()) {
             for (Cell c : row) {
                 switch (c.getState()) {
-                    case HEALTHY  -> healthy++;
-                    case INFECTED -> infected++;
-                    case DEAD     -> dead++;
+                    case HEALTHY         -> healthy++;
+                    case DEPOSITED_SPORE -> healthy++; // spore déposée = pas encore infecté
+                    case INFECTED        -> infected++;
+                    case SPORULATING     -> infected++; // sporulant = actif = compté comme infecté
+                    case DEAD            -> dead++;
                 }
                 totalAge  += c.getAge();
                 totalMold += c.getMoldLevel();

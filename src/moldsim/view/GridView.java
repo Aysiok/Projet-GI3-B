@@ -21,9 +21,10 @@ public class GridView extends Canvas {
     // ── cell states ──────────────────────────────────────────────────────────
     private static final int HEALTHY = 0;
     private static final int INFECTED = 1;
-    private static final int DEAD     = 2;
-    private static final int DEPOSITED_SPORE = 3;
-    private static final int SPORULATING = 4;
+    private static final int DEAD = 2;
+    private static final int TREATED = 3;
+    private static final int DEPOSITED_SPORE = 4;
+    private static final int SPORULATING = 5;
 
     // ── cell types (public so the controller can reference them) ─────────────
     public static final int TYPE_WALL = 0;
@@ -59,6 +60,10 @@ public class GridView extends Canvas {
     private ShelfValue nextShelfValue = ShelfValue.MEDIUM;
     public enum DrawMode { POINT, BRUSH, RECTANGLE }
     private DrawMode drawMode = DrawMode.POINT;
+    private boolean justFinishedRectangle = false;
+    private InteractionMode interactionMode = InteractionMode.NONE;
+    private InteractionCompleteListener interactionCompleteListener;
+
 
     // ═════════════════════════════════════════════════════════════════════════
     //  Construction
@@ -83,33 +88,31 @@ public class GridView extends Canvas {
 
         setOnMouseClicked(event -> {
             int col = (int) (event.getX() / cellSize);
-            int row = (int) (event.getY() / cellSize);
-
-            if (event.getButton() == MouseButton.PRIMARY) {
-                if (placementMode) {
-                    if (shelfPlacementListener != null){
-                        shelfPlacementListener.onShelfPlaced(row, col, ghostWidth, ghostHeight);
-                    }
+            int row    = (int) (event.getY() / cellSize);
+            if (justFinishedRectangle) {
+                justFinishedRectangle = false;
+                return;
+            }
+            if (placementMode) {
+                if (event.getButton() == MouseButton.PRIMARY && shelfPlacementListener != null) {
+                    shelfPlacementListener.onShelfPlaced(row, col, ghostWidth, ghostHeight);
                     disablePlacementMode();
-                } else if (drawMode == DrawMode.RECTANGLE) {
-                    dragStartRow = row;
-                    dragStartCol = col;
-                    dragCurrentRow = row;
-                    dragCurrentCol = col;
-                    isDraggingRectangle = true;
                 } else if (drawMode == DrawMode.BRUSH) {
                     setCellStateAndSync(row, col, INFECTED);
                     draw();
                 } else {
                     if (cellClickListener != null && isInside(row, col)) {
-                        cellClickListener.onCellClicked(row, col);
-                        cellClickListener.onInteractionComplete();
+                        cellClickListener.onCellClicked(row, col, event.getButton());
                     }
                 }
             } else if (event.getButton() == MouseButton.SECONDARY) {
-                if (shelfPlacementListener != null && isInside(row, col) && cellType[row][col] != TYPE_WALL) {
+                if (isInside(row, col) && cellClickListener != null && interactionMode != InteractionMode.NONE) {
+                    cellClickListener.onCellClicked(row, col, MouseButton.SECONDARY);
+                } else if (shelfPlacementListener != null && isInside(row, col) && cellType[row][col] != TYPE_WALL) {
                     shelfPlacementListener.onShelfRemoved(row, col);
                 }
+            } else if (isInside(row, col) && cellClickListener != null) {
+                cellClickListener.onCellClicked(row, col, event.getButton());
             }
         });
 
@@ -119,8 +122,9 @@ public class GridView extends Canvas {
 
             if (!placementMode) {
                 if (drawMode == DrawMode.BRUSH && isInside(row, column)) {
-                    setCellStateAndSync(row, column, INFECTED);
-                    draw();
+                    if (cellClickListener != null) {
+                        cellClickListener.onCellClicked(row, column, event.getButton());
+                }
                 } else if (drawMode == DrawMode.RECTANGLE && isDraggingRectangle) {
                     dragCurrentRow = Math.max(0, Math.min(rows - 1, row));
                     dragCurrentCol = Math.max(0, Math.min(columns - 1, column));
@@ -132,20 +136,22 @@ public class GridView extends Canvas {
         setOnMouseReleased(event -> {
             if (event.getButton() == MouseButton.PRIMARY && !placementMode) {
                 if (drawMode == DrawMode.BRUSH) {
-                    if (cellClickListener != null) cellClickListener.onInteractionComplete();
+                    if (cellClickListener != null)
+                        cellClickListener.onCellClicked(dragCurrentRow, dragCurrentCol, MouseButton.PRIMARY);
                 } else if (drawMode == DrawMode.RECTANGLE && isDraggingRectangle) {
                     int rMin = Math.min(dragStartRow, dragCurrentRow);
                     int rMax = Math.max(dragStartRow, dragCurrentRow);
                     int cMin = Math.min(dragStartCol, dragCurrentCol);
                     int cMax = Math.max(dragStartCol, dragCurrentCol);
-
                     for (int r = rMin; r <= rMax; r++) {
                         for (int c = cMin; c <= cMax; c++) {
-                            setCellStateAndSync(r, c, INFECTED);
+                            applyInteractionToCell(r, c);
                         }
                     }
                     isDraggingRectangle = false;
-                    if (cellClickListener != null) cellClickListener.onInteractionComplete();
+                    justFinishedRectangle = true;
+                    if (interactionCompleteListener != null)
+                        interactionCompleteListener.onComplete();
                     draw();
                 }
             }
@@ -156,6 +162,18 @@ public class GridView extends Canvas {
                 ghostCol = (int) (event.getX() / cellSize);
                 ghostRow = (int) (event.getY() / cellSize);
                 draw();
+            }
+        });
+
+        setOnMousePressed(event -> {
+            if (!placementMode && drawMode == DrawMode.RECTANGLE && event.getButton() == MouseButton.PRIMARY) {
+                int col = (int) (event.getX() / cellSize);
+                int row = (int) (event.getY() / cellSize);
+                dragStartRow = row;
+                dragStartCol = col;
+                dragCurrentRow = row;
+                dragCurrentCol = col;
+                isDraggingRectangle = true;
             }
         });
         
@@ -187,6 +205,14 @@ public class GridView extends Canvas {
         draw();
     }
 
+    public void applyInteractionToCell(int row, int col) {
+        switch (interactionMode) {
+            case ADD_MOLD  -> paintMold(row, col);
+            case TREAT_WALL -> paintTreatment(row, col);
+            default -> {}
+        }
+    }
+
     // ═════════════════════════════════════════════════════════════════════════
     //  Setters
     // ═════════════════════════════════════════════════════════════════════════
@@ -213,12 +239,13 @@ public class GridView extends Canvas {
         return nextShelfValue;
     }
 
+    public void setInteractionCompleteListener(InteractionCompleteListener l) {
+        this.interactionCompleteListener = l;
+    }
+
     // ═════════════════════════════════════════════════════════════════════════
     //  Listeners
     // ═════════════════════════════════════════════════════════════════════════
-
-
-    public void setCellThicknessListener(CellClickListener listener) {}
 
     public void setCellClickListener(CellClickListener listener) {
         this.cellClickListener = listener;
@@ -251,6 +278,13 @@ public class GridView extends Canvas {
     }
 
     public void stepSimulation() {
+        for (int row = 0; row < rows; row++){
+            for (int col = 0; col < columns; col++){
+                if (cells[row][col] == TREATED){
+                    cells[row][col] = HEALTHY;
+                }
+            }
+        }
         if (simulation != null) {
             simulation.step();
             updateViewFromModel();
@@ -345,11 +379,8 @@ public class GridView extends Canvas {
         int state = cells[row][col];
 
         if (state == DEPOSITED_SPORE) {
-            // Spore déposée : pas encore une vraie moisissure visible
             gc.setFill(Color.rgb(180, 160, 60));
-
         } else if (state == SPORULATING) {
-            // Moisissure mature / fleurie : très active
             if (type == TYPE_DOCUMENT) {
                 gc.setFill(Color.rgb(160, 230, 120));
             } else if (type == TYPE_SHELF) {
@@ -357,7 +388,6 @@ public class GridView extends Canvas {
             } else {
                 gc.setFill(Color.rgb(90, 180, 90));
             }
-
         } else if (state == INFECTED) {
             if (type == TYPE_DOCUMENT) {
                 gc.setFill(Color.rgb(120, 206, 140));
@@ -366,10 +396,10 @@ public class GridView extends Canvas {
             } else {
                 gc.setFill(Color.rgb(40, 130, 60));
             }
-
+        } else if (state == TREATED) {
+            gc.setFill(Color.rgb(133, 133, 133));
         } else if (state == DEAD) {
             gc.setFill(Color.rgb(70, 70, 70));
-
         } else {
             if (type == TYPE_DOCUMENT) {
                 moldsim.model.ShelfValue val = cellValue[row][col];
@@ -389,7 +419,7 @@ public class GridView extends Canvas {
                 gc.setFill(Color.rgb(101, 67, 33));
 
             } else {
-                gc.setFill(Color.rgb(105, 240, 255));
+                gc.setFill(Color.rgb(200, 190, 175));
             }
         }
 
@@ -397,6 +427,50 @@ public class GridView extends Canvas {
         gc.setStroke(Color.rgb(50, 50, 50));
         gc.setLineWidth(0.5);
         gc.strokeRect(x, y, cellSize, cellSize);
+    }
+
+    public void paintMold(int row, int col) {
+        if (!isInside(row, col)) return;
+        cells[row][col] = INFECTED;
+        syncModelCellFromView(row, col);
+        draw();
+    }
+
+    public void paintTreatment(int row, int col) {
+        if (!isInside(row, col)) return;
+        if (cells[row][col] == INFECTED) {
+            cells[row][col] = TREATED;
+            Cell cell = modelGrid.getCell(col, row);
+            if (cell != null) cell.cure();
+        }
+        draw();
+    }
+
+    public void eraseMold(int row, int col) {
+        if (!isInside(row, col)) return;
+        if (cells[row][col] == INFECTED) {
+            cells[row][col] = HEALTHY;
+            Cell cell = modelGrid.getCell(col, row);
+            if (cell != null) cell.cure();
+        }
+        draw();
+    }
+
+    public void unpaintTreatment(int row, int col) {
+        if (!isInside(row, col)) return;
+        if (cells[row][col] == TREATED) {
+            cells[row][col] = INFECTED;
+            Cell cell = modelGrid.getCell(col, row);
+            if (cell != null) cell.infect(MoldSpecies.CLADOSPORIUM);
+        }
+        draw();
+    }
+
+    public InteractionMode getInteractionMode() { return interactionMode; }
+    public void setInteractionMode(InteractionMode mode) { this.interactionMode = mode; }
+
+    public interface CellClickListener {
+        void onCellClicked(int row, int column, MouseButton button);
     }
 
     public int[][] copyGridState() {
@@ -464,11 +538,32 @@ public class GridView extends Canvas {
         }
     }
 
-    private void syncModelCellFromView(int row, int col) {
+    public void syncViewFromModel() {
         if (modelGrid == null) return;
-        Cell cell = modelGrid.getCell(col, row);
-        if (cell == null) return;
+        for (int row = 0; row < rows; row++) {
+            for (int col = 0; col < columns; col++) {
+                Cell cell = modelGrid.getCell(col, row);
+                if (cell == null) continue;
+                switch (cell.getState()) {
+                    case INFECTED -> cells[row][col] = INFECTED;
+                    case DEAD     -> cells[row][col] = DEAD;
+                    default -> {
+                        if (cells[row][col] != TREATED) cells[row][col] = HEALTHY;
+                    }
+                }
+            }
+        }
+        draw();
+}
 
+    private void syncModelCellFromView(int row, int col) {
+        if (modelGrid == null) {
+            return;
+        }
+        Cell cell = modelGrid.getCell(col, row);
+        if (cell == null) {
+            return;
+        }
         int state = cells[row][col];
         int type = cellType[row][col];
 
@@ -529,21 +624,23 @@ public class GridView extends Canvas {
     //  Interfaces
     // ═════════════════════════════════════════════════════════════════════════
 
-    public interface CellClickListener {
-        void onCellClicked(int row, int column);
-        void onInteractionComplete(); 
-    }
-
     public interface ShelfPlacementListener {
         void onShelfPlaced(int row, int col, int width, int height);
         void onShelfRemoved(int row, int col); // ← ajoute ça
+    }
+
+    public enum InteractionMode {
+        NONE, ADD_MOLD, TREAT_WALL, TREAT_SHELF, PLACE_EVENT
+    }
+
+    public interface InteractionCompleteListener {
+        void onComplete();
     }
 
     public void updateViewFromModel() {
         if (modelGrid == null) {
             return;
         }
-
         for (int row = 0; row < rows; row++) {
             for (int col = 0; col < columns; col++) {
                 moldsim.model.Cell cell = modelGrid.getCell(col, row);

@@ -2,20 +2,18 @@ package moldsim.controller;
 
 import moldsim.model.*;
 import moldsim.view.GridView;
+import moldsim.view.GridView.InteractionMode;
 import moldsim.view.MainView;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
+import javafx.scene.input.MouseButton;
 import moldsim.view.WallConfigDialog;
 /**
  * Controller for the grid interface.
  * Connects MainView controls to GridView actions.
  */
-
-
 public class GridController {
     private final MainView mainView;
     private final GridView gridView;
@@ -24,10 +22,10 @@ public class GridController {
     private List<SimulationSnapshot> history;
     private int currentStepIndex;
     private Wall modelGrid;
+    private Environment environment;
+    private SimulationController simulation;
+    private ExternalEvent pendingEvent = null;
     private WallManager wallManager;
-    private moldsim.model.Environment environment;
-    private moldsim.controller.SimulationController simulation;
-
     
     private boolean updatingTimeSlider;
     private boolean updatingControls;
@@ -68,9 +66,7 @@ public class GridController {
     }
     
     public void initialize() {
-        if (modelGrid == null) {
-            modelGrid = new Wall(gridView.getColumns(), gridView.getRows());
-       }
+        modelGrid = new Wall(gridView.getColumns(), gridView.getRows());
         environment = new Environment();
         environment.setHumidity(mainView.getHumiditySlider().getValue());
         environment.setTemperature(mainView.getTemperatureSlider().getValue());
@@ -126,6 +122,50 @@ public class GridController {
         mainView.getSaveButton().setOnAction(event -> saveSimulation());
         mainView.getLoadButton().setOnAction(event -> loadSimulation());
 
+        mainView.getWaterLeakButton().setOnAction(e -> {
+        pendingEvent = ExternalEvent.WATER_LEAK;
+        mainView.getStatusLabel().setText("Click on the grid to place a water leak.");
+    });
+
+        mainView.getHvacFailureButton().setOnAction(e -> {
+            simulation.getEventManager().apply(ExternalEvent.HVAC_FAILURE, modelGrid, 0, 0, 0);
+            mainView.getVentilationSlider().setValue(environment.getVentilation());
+            markCurrentStepAsModified("HVAC failure at week " + currentStepIndex + ". Future steps were cleared.");
+        });
+
+        mainView.getWindowOpenedButton().setOnAction(e -> {
+            simulation.getEventManager().apply(ExternalEvent.WINDOW_OPENED, modelGrid, 0, 0, 0);
+            mainView.getVentilationSlider().setValue(environment.getVentilation());
+            markCurrentStepAsModified("Window opened at week " + currentStepIndex + ". Future steps were cleared.");
+        });
+
+        mainView.getTreatShelfButton().setOnAction(e -> {
+            gridView.setInteractionMode(InteractionMode.NONE);
+            updateModeButtons();
+            pendingEvent = ExternalEvent.ANTI_MOLD_TREATMENT_SHELF;
+            mainView.getStatusLabel().setText("Click on a shelf to treat it.");
+        });
+
+        mainView.getAddMoldButton().setOnAction(e -> {
+            if (gridView.getInteractionMode() == InteractionMode.ADD_MOLD) {
+                gridView.setInteractionMode(InteractionMode.NONE);
+            } else {
+                gridView.setInteractionMode(InteractionMode.ADD_MOLD);
+                mainView.getStatusLabel().setText("Draw mode: Mold — left click to paint, right click to erase.");
+            }
+            updateModeButtons();
+        });
+
+        mainView.getTreatWallButton().setOnAction(e -> {
+            if (gridView.getInteractionMode() == InteractionMode.TREAT_WALL) {
+                gridView.setInteractionMode(InteractionMode.NONE);
+            } else {
+                gridView.setInteractionMode(InteractionMode.TREAT_WALL);
+                mainView.getStatusLabel().setText("Draw mode: Treatment — left click to treat, right click to erase.");
+            }
+            updateModeButtons();
+        });
+
         gridView.setShelfPlacementListener(new GridView.ShelfPlacementListener() {
             @Override
             public void onShelfPlaced(int row, int col, int width, int height) {
@@ -169,20 +209,66 @@ public class GridController {
             goToStep(targetIndex);
         });
 
-        gridView.setCellClickListener(new GridView.CellClickListener() {
-            @Override
-            public void onCellClicked(int row, int column) {
-                gridView.toggleInfection(row, column);
-            }
-            @Override
-            public void onInteractionComplete() {
-                markCurrentStepAsModified("Grid modified at week " + currentStepIndex + ". Future steps were cleared.");
+        gridView.setCellClickListener((row, column, button) -> {
+            boolean isErase = button == MouseButton.SECONDARY;
+            InteractionMode mode = gridView.getInteractionMode();
+
+            if (pendingEvent != null) {
+                int radius = 3;
+                switch (pendingEvent) {
+                    case WATER_LEAK -> {
+                        simulation.getEventManager().apply(ExternalEvent.WATER_LEAK, modelGrid, column, row, radius);
+                        mainView.getHumiditySlider().setValue(environment.getHumidity());
+                        gridView.syncViewFromModel();
+                        markCurrentStepAsModified("Water leak at week " + currentStepIndex + ". Future steps were cleared.");
+                    }
+                    case ANTI_MOLD_TREATMENT_WALL -> {
+                        simulation.getEventManager().apply(ExternalEvent.ANTI_MOLD_TREATMENT_WALL, modelGrid, column, row, radius);
+                        gridView.syncViewFromModel();
+                        markCurrentStepAsModified("Wall treated at week " + currentStepIndex + ". Future steps were cleared.");
+                    }
+                    case ANTI_MOLD_TREATMENT_SHELF -> {
+                        Shelf target = shelves.stream().filter(s -> column >= s.getX() && column < s.getX() + s.getWidth() && row >= s.getY() && row < s.getY() + s.getHeight()).findFirst().orElse(null);
+                        if (target != null) {
+                            simulation.getEventManager().treatShelf(modelGrid, target);
+                            gridView.syncViewFromModel();
+                            markCurrentStepAsModified("Shelf " + target.getId() + " treated at week " + currentStepIndex + ". Future steps were cleared.");
+                        } else {
+                            mainView.getStatusLabel().setText("No shelf at this location.");
+                            return;
+                        }
+                    }
+                    default -> {}
+                }
+                pendingEvent = null;
+            } else {
+                switch (mode) {
+                    case ADD_MOLD -> {
+                        if (isErase) {
+                            gridView.eraseMold(row, column);
+                        } else {
+                            gridView.paintMold(row, column);
+                        }
+                        markCurrentStepAsModified("Cell modified at week " + currentStepIndex + "...");
+                    }
+                    case TREAT_WALL -> {
+                        if (isErase) {
+                            gridView.unpaintTreatment(row, column);
+                        } else {
+                            gridView.paintTreatment(row, column);
+                        }
+                        markCurrentStepAsModified("Treatment applied at week " + currentStepIndex + "...");
+                    }
+                    case TREAT_SHELF, PLACE_EVENT, NONE -> {}
+                }
             }
         });
 
         updateStatistics();
         mainView.updateCurrentLocationLabel(locationContext.getDisplayName());
         mainView.getApplyLocationButton().setOnAction(event -> updateLocationFromInput()); 
+
+        gridView.setInteractionCompleteListener(() -> markCurrentStepAsModified("Draw action at week " + currentStepIndex + "."));
     }
 
     private void markShelvesOnGrid() {
@@ -310,7 +396,6 @@ public class GridController {
             mainView.getRiskLabel().setText("Risk: High");
         }
     }
-
     private void updateLocationFromInput() {
         String roomName = mainView.getRoomNameField().getText().trim();
         String wallName = mainView.getWallNameField().getText().trim();
@@ -346,9 +431,17 @@ public class GridController {
 
     private void updateTimeDisplay() {
         int week = currentStepIndex;
-        mainView.getGenerationLabel().setText("Step: " + currentStepIndex);
         mainView.getWeekLabel().setText("Time elapsed: " + week + " week(s)");
-        mainView.getStepLabel().setText("History: " + currentStepIndex + " / " + (history.size() - 1));
+    }
+
+    private void updateModeButtons() {
+        InteractionMode mode = gridView.getInteractionMode();
+        String active   = "-fx-background-color: #FFD700; -fx-text-fill: black;";
+        String moldBase = "-fx-background-color: #3A7A3A; -fx-text-fill: white;";
+        String treatBase= "-fx-background-color: #5A3A7A; -fx-text-fill: white;";
+
+        mainView.getAddMoldButton().setStyle(mode == InteractionMode.ADD_MOLD ? active : moldBase);
+        mainView.getTreatWallButton().setStyle(mode == InteractionMode.TREAT_WALL ? active : treatBase);
     }
 
     private void goToStep(int targetIndex) {

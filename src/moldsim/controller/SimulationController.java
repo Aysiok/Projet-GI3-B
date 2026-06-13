@@ -15,6 +15,7 @@ public class SimulationController {
     private final Environment environment;
     private final Random random;
     private final Map<Wall, List<Shelf>> shelvesByWall;
+    private final EventManager eventManager;
     private int currentWeek;
 
     private static final double BASE_EXTERNAL_SPORE_DEPOSITION = 0.00002; //apparition très rare de spores venant de l’environnement extérieur
@@ -26,12 +27,13 @@ public class SimulationController {
     private static final double CRITICAL_MOLD_LEVEL = 90.0; //90.0 : si le niveau de moisissure est très haut, la mort devient plus probable.
 
     public SimulationController(ArchiveRoom room, Map<Wall, List<Shelf>> shelvesByWall, Environment environment) {
-        this.room            = room;
-        this.environment     = environment;
-        this.sensors         = new ArrayList<>();
+        this.room = room;
+        this.environment = environment;
+        this.sensors = new ArrayList<>();
         this.alertController = new AlertController();
-        this.currentWeek     = 0;
-        this.random          = new Random();
+        this.currentWeek = 0;
+        this.random = new Random();
+        this.eventManager = new EventManager(environment);
         this.shelvesByWall = new HashMap<>(shelvesByWall);
         initSensors(shelvesByWall);
         alertController.setRecommendationEngine(new RecommendationEngine(room));
@@ -40,7 +42,7 @@ public class SimulationController {
     public SimulationController(Wall wall, Environment environment) {
         this.room = new ArchiveRoom("Archive", environment);
         this.room.setNorthWall(wall);
-
+        this.eventManager = new EventManager(environment);
         this.environment = environment;
         this.sensors = new ArrayList<>();
         this.alertController = new AlertController();
@@ -155,6 +157,10 @@ public class SimulationController {
 
     public List<SensorEvent> getHistory() {
         return alertController.getHistory();
+    }
+
+    public EventManager getEventManager() {
+        return eventManager;
     }
 
     public void updateShelves(List<Shelf> shelves) {
