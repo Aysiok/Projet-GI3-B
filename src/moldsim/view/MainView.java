@@ -41,11 +41,9 @@ public class MainView extends BorderPane {
     private ComboBox<String> drawToolComboBox;
 
     private Label statusLabel;
-    private Label generationLabel;
     private Label infectedLabel;
     private Label riskLabel;
     private Label weekLabel;
-    private Label stepLabel;
 
     // ── room-wall-display ───────────────────────────────────
     private Label currentLocationLabel;
@@ -137,15 +135,22 @@ public class MainView extends BorderPane {
 
         sidebar.getChildren().addAll(humLabel, humiditySlider, tempLabel, temperatureSlider, ventLabel, ventilationSlider, matLabel, materialComboBox, specLabel, speciesComboBox);
 
+        sidebar.getChildren().add(sectionLabel("Draw Tool"));
+        drawToolComboBox = new ComboBox<>();
+        drawToolComboBox.getItems().addAll("Point", "Brush", "Rectangle");
+        drawToolComboBox.setValue("Point");
+        drawToolComboBox.setMaxWidth(Double.MAX_VALUE);
+        
+        sidebar.getChildren().add(drawToolComboBox);
+
         sidebar.getChildren().add(sectionLabel("Statistics"));
 
-        generationLabel = statLabel("Step: 0");
         weekLabel       = statLabel("Time elapsed: 0 week(s)");
-        stepLabel       = statLabel("Saved step: 0 / 0");
         infectedLabel   = statLabel("Infected: 0 (0.0%)");
         riskLabel       = statLabel("Risk: Low");
 
-        sidebar.getChildren().addAll(generationLabel, weekLabel, stepLabel, infectedLabel, riskLabel);
+        sidebar.getChildren().addAll(weekLabel, infectedLabel, riskLabel);
+
         return sidebar;
     }
 
@@ -182,12 +187,6 @@ public class MainView extends BorderPane {
         timeSlider.setMinorTickCount(0);
         timeSlider.setSnapToTicks(true);
 
-        Label toolLabel = new Label("Draw Tool:");
-        toolLabel.setStyle("-fx-text-fill: #ccc; -fx-font-size: 11;");
-        drawToolComboBox = new ComboBox<>();
-        drawToolComboBox.getItems().addAll("Point", "Brush", "Rectangle");
-        drawToolComboBox.setValue("Point");
-
         playButton.setStyle("-fx-background-color: #1D9E75; -fx-text-fill: white;");
         pauseButton.setStyle("-fx-background-color: #BA7517; -fx-text-fill: white;");
         resetButton.setStyle("-fx-background-color: #555; -fx-text-fill: white;");
@@ -199,8 +198,7 @@ public class MainView extends BorderPane {
         speedSlider = new Slider(1, 10, 3);
         speedSlider.setPrefWidth(100);
 
-        buttons.getChildren().addAll(
-            toolLabel, drawToolComboBox, 
+        buttons.getChildren().addAll( 
             playButton, pauseButton, previousStepButton, stepButton, resetButton, 
             exportPdfButton, speedLabel, speedSlider, timeLabel, timeSlider, newShelfButton
         );
@@ -245,12 +243,7 @@ public class MainView extends BorderPane {
             radiusLabel.setText(String.format("Radius: %.0f", n.doubleValue())));
 
         sidebar.getChildren().addAll(
-            waterLeakButton,
-            hvacFailureButton,
-            windowOpenedButton,
-            radiusLabel,
-            eventRadiusSlider
-        );
+            waterLeakButton, hvacFailureButton, windowOpenedButton);
 
         sidebar.getChildren().add(sectionLabel("Drawing Modes"));
 
@@ -300,7 +293,6 @@ public class MainView extends BorderPane {
     public Button getStepButton()          { return stepButton; }
     public Button getExportPdfButton()     { return exportPdfButton; }
     public Label getStatusLabel()          { return statusLabel; }
-    public Label getGenerationLabel()      { return generationLabel; }
     public Label getInfectedLabel()        { return infectedLabel; }
     public Label getRiskLabel()            { return riskLabel; }
     public GridView getGridView()          { return gridView; }
@@ -328,11 +320,6 @@ public class MainView extends BorderPane {
     public Label getWeekLabel() {
     return weekLabel;
     }   
-
-    public Label getStepLabel() {
-        return stepLabel;
-    }
-
     public Button getPreviousStepButton() {
         return previousStepButton;
     }

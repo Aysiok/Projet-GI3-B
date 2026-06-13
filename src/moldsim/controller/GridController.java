@@ -192,7 +192,7 @@ public class GridController {
             InteractionMode mode = gridView.getInteractionMode();
 
             if (pendingEvent != null) {
-                int radius = (int) mainView.getEventRadiusSlider().getValue();
+                int radius = 3;
                 switch (pendingEvent) {
                     case WATER_LEAK -> {
                         simulation.getEventManager().apply(ExternalEvent.WATER_LEAK, modelGrid, column, row, radius);
@@ -353,10 +353,7 @@ public class GridController {
 
     private void updateTimeDisplay() {
         int week = currentStepIndex;
-
         mainView.getWeekLabel().setText("Time elapsed: " + week + " week(s)");
-        mainView.getStepLabel().setText("History: " + currentStepIndex + " / " + (history.size() - 1)
-        );
     }
 
     private void updateModeButtons() {
