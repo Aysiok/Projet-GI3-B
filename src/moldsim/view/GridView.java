@@ -407,7 +407,13 @@ public class GridView extends Canvas {
                 gc.setFill(Color.rgb(40, 130, 60));
             }
         } else if (state == TREATED) {
-            gc.setFill(Color.rgb(133, 133, 133));
+            if (type == TYPE_DOCUMENT) {
+                gc.setFill(Color.rgb(183, 183, 183));
+            } else if (type == TYPE_SHELF){
+                gc.setFill(Color.rgb(83, 82, 82));
+            } else {
+                gc.setFill(Color.rgb(133, 133, 133));
+            }
         } else if (state == DEAD) {
             gc.setFill(Color.rgb(70, 70, 70));
         } else {
@@ -448,7 +454,8 @@ public class GridView extends Canvas {
 
     public void paintTreatment(int row, int col) {
         if (!isInside(row, col)) return;
-        if (cells[row][col] == INFECTED) {
+        int state = cells[row][col];
+        if (state == INFECTED || state == SPORULATING || state == DEPOSITED_SPORE) {
             cells[row][col] = TREATED;
             Cell cell = modelGrid.getCell(col, row);
             if (cell != null) cell.cure();
@@ -469,7 +476,7 @@ public class GridView extends Canvas {
     public void unpaintTreatment(int row, int col) {
         if (!isInside(row, col)) return;
         if (cells[row][col] == TREATED) {
-            cells[row][col] = INFECTED;
+            cells[row][col] = SPORULATING;
             Cell cell = modelGrid.getCell(col, row);
             if (cell != null) cell.infect(MoldSpecies.CLADOSPORIUM);
         }
@@ -555,10 +562,14 @@ public class GridView extends Canvas {
                 Cell cell = modelGrid.getCell(col, row);
                 if (cell == null) continue;
                 switch (cell.getState()) {
-                    case INFECTED -> cells[row][col] = INFECTED;
-                    case DEAD     -> cells[row][col] = DEAD;
+                    case INFECTED        -> cells[row][col] = INFECTED;
+                    case SPORULATING     -> cells[row][col] = SPORULATING;
+                    case DEPOSITED_SPORE -> cells[row][col] = DEPOSITED_SPORE;
+                    case DEAD            -> cells[row][col] = DEAD;
                     default -> {
-                        if (cells[row][col] != TREATED) cells[row][col] = HEALTHY;
+                        if (cells[row][col] != TREATED){
+                            cells[row][col] = HEALTHY;
+                        }
                     }
                 }
             }

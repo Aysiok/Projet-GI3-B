@@ -35,7 +35,7 @@ public class Main extends Application {
         GridController gridController = new GridController(mainView, wallConfigs);        
         gridController.initialize();
 
-        Scene scene = new Scene(mainView, 1000, 700);
+        Scene scene = new Scene(mainView, 1300, 700);
         primaryStage.setTitle("ArchiveShield — Mold Risk Simulator");
         primaryStage.setScene(scene);
         primaryStage.show();

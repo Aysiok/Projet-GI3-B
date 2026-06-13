@@ -107,6 +107,21 @@ public class GridController {
             }
         });
 
+        mainView.getSpeedSlider().valueProperty().addListener((obs, oldVal, newVal) -> {
+            if (isRunning && simulationTimer != null) {
+                double speed = Math.max(0.1, newVal.doubleValue());
+                double delay = Math.max(0.05, 1.1 - (speed / 10.0));
+                simulationTimer.stop();
+                simulationTimer.getKeyFrames().setAll(
+                    new javafx.animation.KeyFrame(
+                        javafx.util.Duration.seconds(delay),
+                        e -> step()
+                    )
+                );
+                simulationTimer.play();
+            }
+        });
+
         markShelvesOnGrid();
         gridView.draw();
 
@@ -233,7 +248,11 @@ public class GridController {
                         Shelf target = shelves.stream().filter(s -> column >= s.getX() && column < s.getX() + s.getWidth() && row >= s.getY() && row < s.getY() + s.getHeight()).findFirst().orElse(null);
                         if (target != null) {
                             simulation.getEventManager().treatShelf(modelGrid, target);
-                            gridView.syncViewFromModel();
+                            for (int cy = target.getY(); cy < target.getY() + target.getHeight(); cy++) {
+                                for (int cx = target.getX(); cx < target.getX() + target.getWidth(); cx++) {
+                                    gridView.paintTreatment(cy, cx);
+                                }
+                            }
                             markCurrentStepAsModified("Shelf " + target.getId() + " treated at week " + currentStepIndex + ". Future steps were cleared.");
                         } else {
                             mainView.getStatusLabel().setText("No shelf at this location.");
@@ -341,8 +360,9 @@ public class GridController {
         if (isRunning) return;
         isRunning = true;
 
-        // Create a timer that calls step() automatically
-        double delay = 1.1 - (mainView.getSpeedSlider().getValue() / 10.0);
+        double speed = Math.max(0.1, Math.min(10.0, mainView.getSpeedSlider().getValue()));
+        double delay = Math.max(0.05, 1.1 - (speed / 10.0));
+        
         simulationTimer = new javafx.animation.Timeline(
             new javafx.animation.KeyFrame(
                 javafx.util.Duration.seconds(delay),
