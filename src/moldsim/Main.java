@@ -4,7 +4,6 @@ import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 import moldsim.controller.GridController;
-import moldsim.model.Wall;
 import moldsim.model.WallMaterial;
 import moldsim.view.MainView;
 import moldsim.view.WallConfigDialog;
@@ -32,13 +31,6 @@ public class Main extends Application {
                 };
             }
         }
-
-        Wall northWall = new Wall(
-            wallConfigs[0].width,
-            wallConfigs[0].height,
-            wallConfigs[0].material
-        );
-
         MainView mainView = new MainView();
         GridController gridController = new GridController(mainView, wallConfigs);        
         gridController.initialize();
