@@ -199,11 +199,11 @@ java --module-path "<PATH_TO_JAVAFX>" --add-modules javafx.controls,javafx.graph
 
 | Name | Role |
 |---|---|
-| **Asma Kajeiou** | Cell model, mold propagation logic, mold lifecycle (SPORULATING, DEPOSITED_SPORE) |
 | **Brice Faviere** | UI design (MainView, GridView), draw tools, wall preview (WallPreviewView) |
 | **Matheo Kannengieser** | GridController, multi-wall navigation (WallManager, WallContext), inter-wall spore propagation |
-| **Damien Di Martino** | SimulationController, sensors, alerts, external events (EventManager) |
+| **Asma Kajeiou** | Cell model, mold propagation logic, mold lifecycle (SPORULATING, DEPOSITED_SPORE), play/pause, UML, rapport |
 | **Damien Fernandes** | PDF export, binary save/load (BinaryExporter, SimulationState), snapshots, integration & testing |
+| **Damien Di Martino** | SimulationController, sensors, alerts, external events (EventManager) |
 
 **Tutor:** D. Zaouche — **Academic year:** 2025–2026 — CY Tech ING1-GI
 
