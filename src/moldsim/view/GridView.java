@@ -5,7 +5,7 @@ import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.input.MouseButton;
 import javafx.scene.paint.Color;
 import moldsim.controller.SimulationController;
-import moldsim.model.Wall;
+import moldsim.model.*;
 
 /**
  * Graphical 2D grid drawn with JavaFX Canvas.
@@ -30,8 +30,8 @@ public class GridView extends Canvas {
     private int ghostWidth  = 4;
     private int ghostHeight = 20;
     private ShelfPlacementListener shelfPlacementListener;
-    private moldsim.model.ShelfValue nextShelfValue = moldsim.model.ShelfValue.MEDIUM;
-    private final moldsim.model.ShelfValue[][] cellValue;
+    private ShelfValue nextShelfValue = ShelfValue.MEDIUM;
+    private final ShelfValue[][] cellValue;
     public static final int TYPE_WALL     = 0;
     public static final int TYPE_SHELF    = 1;
     public static final int TYPE_DOCUMENT = 2;
@@ -42,7 +42,7 @@ public class GridView extends Canvas {
         this.cellSize  = cellSize;
         this.cells     = new int[rows][columns];
         this.cellType = new int[rows][columns]; // tout à 0 (wall) par défaut
-        this.cellValue = new moldsim.model.ShelfValue[rows][columns];
+        this.cellValue = new ShelfValue[rows][columns];
 
         setWidth(columns * cellSize);
         setHeight(rows * cellSize);
@@ -84,11 +84,11 @@ public class GridView extends Canvas {
         this.ghostWidth    = width;
         this.ghostHeight   = height;
     }
-    public void setNextShelfValue(moldsim.model.ShelfValue value) {
+    public void setNextShelfValue(ShelfValue value) {
     this.nextShelfValue = value;
 }
 
-    public moldsim.model.ShelfValue getNextShelfValue() {
+    public ShelfValue getNextShelfValue() {
         return nextShelfValue;
     }
 
@@ -98,7 +98,7 @@ public class GridView extends Canvas {
         this.ghostCol = -1;
     }
 
-    public void setCellValue(int row, int col, moldsim.model.ShelfValue value) {
+    public void setCellValue(int row, int col, ShelfValue value) {
         if (isInside(row, col)) cellValue[row][col] = value;
     }
 
@@ -141,7 +141,7 @@ public class GridView extends Canvas {
             simulation.step();
             for (int row = 0; row < rows; row++) {
                 for (int col = 0; col < columns; col++) {
-                    moldsim.model.Cell cell = modelGrid.getCell(col, row);
+                    Cell cell = modelGrid.getCell(col, row);
                     if (cell == null) continue;
                     switch (cell.getState()) {
                         case INFECTED: cells[row][col] = INFECTED; break;
@@ -158,7 +158,6 @@ public class GridView extends Canvas {
         for (int row = 0; row < rows; row++)
             for (int column = 0; column < columns; column++)
                 cells[row][column] = HEALTHY;
-        // on ne remet PAS cellType à zéro — la structure reste
         syncModelFromView();
         draw();
     }
@@ -175,11 +174,9 @@ public class GridView extends Canvas {
         GraphicsContext gc = getGraphicsContext2D();
         gc.clearRect(0, 0, getWidth(), getHeight());
 
-        // Fond de la salle
         gc.setFill(Color.rgb(240, 230, 210));
         gc.fillRect(0, 0, getWidth(), getHeight());
 
-        // Cellules
         for (int row = 0; row < rows; row++){
             for (int column = 0; column < columns; column++){
                 drawCell(gc, row, column);
@@ -206,18 +203,17 @@ public class GridView extends Canvas {
 
         if (state == INFECTED) {
             if (type == TYPE_DOCUMENT) {
-                gc.setFill(Color.rgb(120, 206, 140));   // vert vif sur document
+                gc.setFill(Color.rgb(120, 206, 140));
             } else if (type == TYPE_SHELF) {
-                gc.setFill(Color.rgb(20, 100, 30));   // vert foncé sur bois
+                gc.setFill(Color.rgb(20, 100, 30)); 
             } else {
-                gc.setFill(Color.rgb(40, 130, 60));   // vert normal sur mur
+                gc.setFill(Color.rgb(40, 130, 60)); 
             }
         } else if (state == DEAD) {
             gc.setFill(Color.rgb(70, 70, 70));
         } else {
-    // Sain — couleur selon le type
             if (type == TYPE_DOCUMENT) {
-                moldsim.model.ShelfValue val = cellValue[row][column];
+                ShelfValue val = cellValue[row][column];
                 if (val == null) {
                     gc.setFill(Color.rgb(255, 248, 220));
                 } else {
@@ -229,26 +225,28 @@ public class GridView extends Canvas {
                     });
                 }
             } else if (type == TYPE_SHELF) {
-                gc.setFill(Color.rgb(101, 67, 33));   // marron bois
+                gc.setFill(Color.rgb(101, 67, 33)); 
             } else {
-                gc.setFill(Color.rgb(105, 240, 255)); // beige mur
+                gc.setFill(Color.rgb(105, 240, 255));
             }
         }
-    
-
         gc.fillRect(x, y, cellSize, cellSize);
         gc.setStroke(Color.rgb(50, 50, 50));
         gc.setLineWidth(0.5);
         gc.strokeRect(x, y, cellSize, cellSize);
     }
 
-
     private boolean isInside(int row, int column) {
         return row >= 0 && row < rows && column >= 0 && column < columns;
     }
 
-    public int getRows()    { return rows; }
-    public int getColumns() { return columns; }
+    public int getRows() {
+        return rows;
+    }
+
+    public int getColumns() {
+        return columns;
+    }
 
     public interface CellClickListener {
         void onCellClicked(int row, int column);
@@ -262,7 +260,6 @@ public class GridView extends Canvas {
                 copy[row][column] = cells[row][column];
             }
         }
-
         return copy;
     }
 
@@ -270,13 +267,11 @@ public class GridView extends Canvas {
         if (savedState == null) {
             return;
         }
-
         for (int row = 0; row < rows; row++) {
             for (int col = 0; col < columns; col++) {
                 cells[row][col] = savedState[row][col];
             }
         }
-
         syncModelFromView();
         draw();
     }
@@ -285,7 +280,6 @@ public class GridView extends Canvas {
         if (modelGrid == null) {
             return;
         }
-
         for (int row = 0; row < rows; row++) {
             for (int col = 0; col < columns; col++) {
                 syncModelCellFromView(row, col);
@@ -297,39 +291,50 @@ public class GridView extends Canvas {
         if (modelGrid == null) {
             return;
         }
-
-        moldsim.model.Cell cell = modelGrid.getCell(col, row);
-
+        Cell cell = modelGrid.getCell(col, row);
         if (cell == null) {
             return;
         }
-
         int state = cells[row][col];
         int type = cellType[row][col];
 
-        // Synchronisation de l'état biologique
         if (state == INFECTED) {
-            cell.infect(moldsim.model.MoldSpecies.CLADOSPORIUM);
+            cell.infect(MoldSpecies.CLADOSPORIUM);
         } else if (state == DEAD) {
             cell.kill();
         } else {
-            cell.setState(moldsim.model.CellState.HEALTHY);
+            cell.setState(CellState.HEALTHY);
             cell.setSpecies(null);
             cell.setMoldLevel(0.0);
             cell.setAge(0);
         }
-
-        // Synchronisation du matériau
         if (type == TYPE_SHELF) {
-            cell.setWallMaterial(moldsim.model.WallMaterial.WOOD);
+            cell.setWallMaterial(WallMaterial.WOOD);
         } else if (type == TYPE_DOCUMENT) {
-            cell.setWallMaterial(moldsim.model.WallMaterial.DOCUMENT);
+            cell.setWallMaterial(WallMaterial.DOCUMENT);
         } else {
-            cell.setWallMaterial(moldsim.model.WallMaterial.PLASTER);
+            cell.setWallMaterial(WallMaterial.PLASTER);
         }
     }
+
+    public void syncViewFromModel() {
+        if (modelGrid == null) return;
+        for (int row = 0; row < rows; row++) {
+            for (int col = 0; col < columns; col++) {
+                Cell cell = modelGrid.getCell(col, row);
+                if (cell == null) continue;
+                switch (cell.getState()) {
+                    case INFECTED -> cells[row][col] = INFECTED;
+                    case DEAD -> cells[row][col] = DEAD;
+                    default -> cells[row][col] = HEALTHY;
+                }
+            }
+        }
+        draw();
+    }
+
     public interface ShelfPlacementListener {
         void onShelfPlaced(int row, int col, int width, int height);
-        void onShelfRemoved(int row, int col); // ← ajoute ça
+        void onShelfRemoved(int row, int col);
 }
 }

@@ -14,12 +14,21 @@ import javafx.scene.text.Text;
  */
 public class MainView extends BorderPane {
 
-    // ── Sidebar controls ──────────────────────────────────────
+    // ── Left Sidebar controls ──────────────────────────────────
     private Slider humiditySlider;
     private Slider temperatureSlider;
     private Slider ventilationSlider;
     private ComboBox<String> materialComboBox;
     private ComboBox<String> speciesComboBox;
+
+    // ── Right Sidebar controls ──────────────────────────────────
+
+    private Button waterLeakButton;
+    private Button hvacFailureButton;
+    private Button windowOpenedButton;
+    private Button treatWallButton;
+    private Button treatShelfButton;
+    private Slider eventRadiusSlider;
 
     // ── Bottom controls ───────────────────────────────────────
     private Button playButton;
@@ -32,7 +41,6 @@ public class MainView extends BorderPane {
     private Slider timeSlider;
     private Button newShelfButton;
     
-
     // ── Status bar ────────────────────────────────────────────
     private Label statusLabel;
     private Label infectedLabel;
@@ -46,7 +54,7 @@ public class MainView extends BorderPane {
     private TextField wallNameField;
     private Button applyLocationButton;
 
-    // ── Grid placeholder (sera remplacé par GridView) ─────────
+    // ── GridView ─────────────────────────────────
     private GridView gridView;
 
     /**
@@ -55,6 +63,7 @@ public class MainView extends BorderPane {
     public MainView() {
         setTop(buildTopBar());
         setLeft(buildSidebar());
+        setRight(buildEventSidebar());
         setCenter(buildGridArea());
         setBottom(buildBottomBar());
     }
@@ -94,7 +103,7 @@ public class MainView extends BorderPane {
         return topBar;
 }
 
-    // ── Sidebar ───────────────────────────────────────────────
+    // ── Left Sidebar ───────────────────────────────────────────────
     private VBox buildSidebar() {
         VBox sidebar = new VBox(12);
         sidebar.setPadding(new Insets(14, 12, 14, 12));
@@ -230,6 +239,63 @@ public class MainView extends BorderPane {
         return bottom;
     }
 
+    // ── Right Sidebar ───────────────────────────────────────────────
+
+    private VBox buildEventSidebar() {
+        VBox sidebar = new VBox(12);
+        sidebar.setPadding(new Insets(14, 12, 14, 12));
+        sidebar.setPrefWidth(180);
+        sidebar.setStyle("-fx-background-color: #1E1E1E;");
+
+        sidebar.getChildren().add(sectionLabel("External Events"));
+
+        waterLeakButton = new Button("Water Leak");
+        hvacFailureButton = new Button("HVAC Failure");
+        windowOpenedButton = new Button("Open Window");
+
+        waterLeakButton.setMaxWidth(Double.MAX_VALUE);
+        hvacFailureButton.setMaxWidth(Double.MAX_VALUE);
+        windowOpenedButton.setMaxWidth(Double.MAX_VALUE);
+
+        waterLeakButton.setStyle("-fx-background-color: #1A5C8A; -fx-text-fill: white;");
+        hvacFailureButton.setStyle("-fx-background-color: #8A1A1A; -fx-text-fill: white;");
+        windowOpenedButton.setStyle("-fx-background-color: #1A7A4A; -fx-text-fill: white;");
+
+        Label radiusLabel = new Label("Radius: 3");
+        radiusLabel.setStyle("-fx-text-fill: #ccc; -fx-font-size: 11;");
+        eventRadiusSlider = new Slider(1, 10, 3);
+        eventRadiusSlider.setShowTickLabels(true);
+        eventRadiusSlider.setMajorTickUnit(3);
+        eventRadiusSlider.setSnapToTicks(true);
+        eventRadiusSlider.setMaxWidth(Double.MAX_VALUE);
+        eventRadiusSlider.valueProperty().addListener((obs, o, n) ->
+            radiusLabel.setText(String.format("Radius: %.0f", n.doubleValue())));
+
+        sidebar.getChildren().addAll(
+            waterLeakButton,
+            hvacFailureButton,
+            windowOpenedButton,
+            radiusLabel,
+            eventRadiusSlider
+        );
+
+        sidebar.getChildren().add(sectionLabel("Treatments"));
+
+        treatWallButton = new Button("Treat Wall Zone");
+        treatShelfButton = new Button("Treat Shelf");
+
+        treatWallButton.setMaxWidth(Double.MAX_VALUE);
+        treatShelfButton.setMaxWidth(Double.MAX_VALUE);
+
+        treatWallButton.setStyle("-fx-background-color: #5A3A7A; -fx-text-fill: white;");
+        treatShelfButton.setStyle("-fx-background-color: #5A3A7A; -fx-text-fill: white;");
+
+        sidebar.getChildren().addAll(treatWallButton, treatShelfButton);
+
+        return sidebar;
+    }
+
+
     // ── Helpers ───────────────────────────────────────────────
     private Label sectionLabel(String text) {
         Label lbl = new Label(text.toUpperCase());
@@ -300,5 +366,10 @@ public class MainView extends BorderPane {
     }
 
     
-
+    public Button getWaterLeakButton()    { return waterLeakButton; }
+    public Button getHvacFailureButton()  { return hvacFailureButton; }
+    public Button getWindowOpenedButton() { return windowOpenedButton; }
+    public Button getTreatWallButton()    { return treatWallButton; }
+    public Button getTreatShelfButton()   { return treatShelfButton; }
+    public Slider getEventRadiusSlider()  { return eventRadiusSlider; }
 }

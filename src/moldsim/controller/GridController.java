@@ -20,9 +20,9 @@ public class GridController {
     private List<SimulationSnapshot> history;
     private int currentStepIndex;
     private Wall modelGrid;
-    private moldsim.model.Environment environment;
-    private moldsim.controller.SimulationController simulation;
-
+    private Environment environment;
+    private SimulationController simulation;
+    private ExternalEvent pendingEvent = null;
     
     private boolean updatingTimeSlider;
     private boolean updatingControls;
@@ -68,8 +68,6 @@ public class GridController {
             markSimulationParametersChanged("Ventilation");
         });
 
-
-
         mainView.getMaterialComboBox().valueProperty().addListener((obs, oldValue, newValue) -> {
             WallMaterial mat = toWallMaterial(newValue);
             modelGrid.setMaterial(mat);
@@ -93,6 +91,33 @@ public class GridController {
         mainView.getResetButton().setOnAction(event -> reset());
         mainView.getNewShelfButton().setOnAction(event -> openNewShelfDialog());
         mainView.getExportPdfButton().setOnAction(event -> exportPdf());
+
+        mainView.getWaterLeakButton().setOnAction(e -> {
+        pendingEvent = ExternalEvent.WATER_LEAK;
+        mainView.getStatusLabel().setText("Click on the grid to place a water leak.");
+    });
+
+        mainView.getHvacFailureButton().setOnAction(e -> {
+            simulation.getEventManager().apply(ExternalEvent.HVAC_FAILURE, modelGrid, 0, 0, 0);
+            mainView.getVentilationSlider().setValue(environment.getVentilation());
+            markCurrentStepAsModified("HVAC failure at week " + currentStepIndex + ". Future steps were cleared.");
+        });
+
+        mainView.getWindowOpenedButton().setOnAction(e -> {
+            simulation.getEventManager().apply(ExternalEvent.WINDOW_OPENED, modelGrid, 0, 0, 0);
+            mainView.getVentilationSlider().setValue(environment.getVentilation());
+            markCurrentStepAsModified("Window opened at week " + currentStepIndex + ". Future steps were cleared.");
+        });
+
+        mainView.getTreatWallButton().setOnAction(e -> {
+            pendingEvent = ExternalEvent.ANTI_MOLD_TREATMENT_WALL;
+            mainView.getStatusLabel().setText("Click on the grid to treat a wall zone.");
+        });
+
+        mainView.getTreatShelfButton().setOnAction(e -> {
+            pendingEvent = ExternalEvent.ANTI_MOLD_TREATMENT_SHELF;
+            mainView.getStatusLabel().setText("Click on a shelf to treat it.");
+        });
 
         gridView.setShelfPlacementListener(new GridView.ShelfPlacementListener() {
         @Override
@@ -142,12 +167,38 @@ public class GridController {
         });
 
         gridView.setCellClickListener((row, column) -> {
-            gridView.toggleInfection(row, column);
-
-            markCurrentStepAsModified(
-                "Cell modified at week " + currentStepIndex
-                + ". Future steps were cleared."
-            );
+            if (pendingEvent != null) {
+                int radius = (int) mainView.getEventRadiusSlider().getValue();
+                switch (pendingEvent) {
+                    case WATER_LEAK -> {
+                        simulation.getEventManager().apply(ExternalEvent.WATER_LEAK, modelGrid, column, row, radius);
+                        mainView.getHumiditySlider().setValue(environment.getHumidity());
+                        gridView.syncViewFromModel();
+                        markCurrentStepAsModified("Water leak at week " + currentStepIndex + ". Future steps were cleared.");
+                    }
+                    case ANTI_MOLD_TREATMENT_WALL -> {
+                        simulation.getEventManager().apply(ExternalEvent.ANTI_MOLD_TREATMENT_WALL, modelGrid, column, row, radius);
+                        gridView.syncViewFromModel();
+                        markCurrentStepAsModified("Wall treated at week " + currentStepIndex + ". Future steps were cleared.");
+                    }
+                    case ANTI_MOLD_TREATMENT_SHELF -> {
+                        Shelf target = shelves.stream().filter(s -> column >= s.getX() && column < s.getX() + s.getWidth() && row >= s.getY() && row < s.getY() + s.getHeight()).findFirst().orElse(null);
+                        if (target != null) {
+                            simulation.getEventManager().treatShelf(modelGrid, target);
+                            gridView.syncViewFromModel();
+                            markCurrentStepAsModified("Shelf " + target.getId() + " treated at week " + currentStepIndex + ". Future steps were cleared.");
+                        } else {
+                            mainView.getStatusLabel().setText("No shelf at this location.");
+                            return;
+                        }
+                    }
+                    default -> {}
+                }
+                pendingEvent = null;
+            } else {
+                gridView.toggleInfection(row, column);
+                markCurrentStepAsModified("Cell modified at week " + currentStepIndex + ". Future steps were cleared.");
+            }
         });
 
         updateStatistics();
