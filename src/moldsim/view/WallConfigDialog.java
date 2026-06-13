@@ -156,7 +156,8 @@ public class WallConfigDialog {
         if (fixedHeightMeters <= 0) {
             dialog.setHeaderText(
                 "Choose material and size for the " + wallName + " wall.\n"
-                + GridScale.getScaleDescription()
+                + GridScale.getScaleDescription() + "\n"
+                + "Max size: 20m × 20m"
             );
     
             TextField heightField = new TextField("2.5");
@@ -167,6 +168,16 @@ public class WallConfigDialog {
                     try {
                         double widthMeters = GridScale.parseMeters(widthField.getText());
                         double heightMeters = GridScale.parseMeters(heightField.getText());
+                        if (widthMeters > 20.0) {
+                            widthField.setStyle("-fx-border-color: red;");
+                            widthField.setText("70.0");
+                            return null;
+                        }
+                        if (heightMeters > 20.0) {
+                            heightField.setStyle("-fx-border-color: red;");
+                            heightField.setText("70.0");
+                            return null;
+                        }
     
                         return new WallConfig(materialBox.getValue(), widthMeters, heightMeters);
                     } catch (NumberFormatException e) {
@@ -192,7 +203,12 @@ public class WallConfigDialog {
                 if (btn == ButtonType.OK) {
                     try {
                         double widthMeters = GridScale.parseMeters(widthField.getText());
-    
+                        if (widthMeters > 20.0) {
+                            widthField.setStyle("-fx-border-color: red;");
+                            widthField.setText("70.0");
+                            return null;
+                        }
+
                         return new WallConfig(materialBox.getValue(), widthMeters, fixedHeightMeters);
                     } catch (NumberFormatException e) {
                         return null;
