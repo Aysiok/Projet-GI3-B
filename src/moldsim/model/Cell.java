@@ -34,7 +34,8 @@ public class Cell implements Serializable {
 
 
     public boolean isInfected() {
-        return state == CellState.INFECTED;
+        return state == CellState.INFECTED
+            || state == CellState.SPORULATING;
     }
 
     public boolean isAlive() {
