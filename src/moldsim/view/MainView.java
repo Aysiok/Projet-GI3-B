@@ -429,13 +429,4 @@ public class MainView extends BorderPane {
     public Button getLoadButton() {
         return loadButton;
     }
-    
-    public Button getWaterLeakButton()    { return waterLeakButton; }
-    public Button getHvacFailureButton()  { return hvacFailureButton; }
-    public Button getWindowOpenedButton() { return windowOpenedButton; }
-    public Button getTreatWallButton()    { return treatWallButton; }
-    public Button getTreatShelfButton()   { return treatShelfButton; }
-    public Slider getEventRadiusSlider()  { return eventRadiusSlider; }
-    public Button getAddMoldButton() { return addMoldButton; }
-    public ListView<String> getAlertLogView() { return alertLogView; }
 }
