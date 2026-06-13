@@ -9,6 +9,7 @@ public class AlertController {
 
     private final List<SensorEvent> history;
     private RecommendationEngine recommendationEngine;
+    private AlertLogger logger;
     
     private String contextName = "Current wall";
 
@@ -31,31 +32,37 @@ public class AlertController {
     public void handle(SensorEvent event) {
         history.add(event);
         log(event);
-
         if (recommendationEngine != null) {
             recommendationEngine.analyze(event).forEach(r -> {
-                String message = contextualizeRecommendation(r);
-                System.out.println("[RECOMMENDATION] " + message);
+                if (logger != null) {
+                    logger.log("[RECOMMENDATION] " + r);
+                }
             });
         }
-    }
+}
 
     private void log(SensorEvent event) {
+    if (logger == null) return;
     switch (event.getType()) {
-        case GLOBAL : 
-            System.out.printf("[GLOBAL ALERT] %s | Week %d | %s | rate %.1f%%%n", contextName, event.getWeek(), event.getAlertLevel(), event.getMoldRate() * 100);
-            break;
-        case SHELF : 
+        case GLOBAL ->
+            logger.log(String.format("[GLOBAL ALERT] %s | Week %d | %s | rate %.1f%%",
+                contextName, event.getWeek(), event.getAlertLevel(), event.getMoldRate() * 100));
+        case SHELF -> {
             if (event.getShelf() == null) {
-                System.err.printf(
-                    "[ERROR] %s | Week %d | SHELF event received without associated shelf%n",
-                    contextName, event.getWeek());
+                logger.log(String.format("[ERROR] %s | Week %d | SHELF event without shelf",
+                    contextName, event.getWeek()));
                 return;
             }
-            System.out.printf("[SHELF ALERT] %s | Week %d | %s | shelf %s | rate %.1f%%%n", contextName, event.getWeek(), event.getAlertLevel(), event.getShelf().getId(), event.getMoldRate() * 100);
-            break;
+            logger.log(String.format("[SHELF ALERT] %s | Week %d | %s | shelf %s | rate %.1f%%",
+                contextName, event.getWeek(), event.getAlertLevel(),
+                event.getShelf().getId(), event.getMoldRate() * 100));
+        }
     }
 }
+
+    public void setLogger(AlertLogger logger) {
+        this.logger = logger;
+    }
 
     public void clearHistory() {
         history.clear();
@@ -65,15 +72,7 @@ public class AlertController {
         return history;
     }
 
-    private String contextualizeRecommendation(String recommendation) {
-        if (recommendation == null) {
-            return "";
-        }
-
-        return recommendation
-                .replace("mur Nord", contextName)
-                .replace("Mur Nord", contextName)
-                .replace("mur nord", contextName)
-                .replace("North Wall", contextName);
+    public RecommendationEngine getRecommendationEngine() {
+        return recommendationEngine;
     }
 }

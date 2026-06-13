@@ -101,6 +101,11 @@ public class MoldSensor {
             || shelf.getValue() == ShelfValue.CRITICAL;
     }
 
+    public void reset() {
+        this.lastAlertLevel = AlertLevel.LOW;
+        this.shelfAlertLevels.clear();
+    }
+
     private Shelf getShelfAt(int x, int y) {
         for (Shelf shelf : shelves) {
             if (x >= shelf.getX() && x < shelf.getX() + shelf.getWidth() && y >= shelf.getY() && y < shelf.getY() + shelf.getHeight()) {

@@ -58,13 +58,6 @@ public class SimulationSnapshot implements Serializable{
         return deepCopyWallStates(wallCellStates);
     }
 
-    public int[][] getCellStates() {
-        if (wallCellStates.isEmpty()) {
-            return null;
-        }
-        return deepCopy(wallCellStates.get(0));
-    }
-
     public double getHumidity() {
         return humidity;
     }

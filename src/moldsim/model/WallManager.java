@@ -3,6 +3,8 @@ package moldsim.model;
 import java.util.ArrayList;
 import java.util.List;
 
+import moldsim.controller.WallContext;
+
 public class WallManager {
 
     private final List<WallContext> walls;

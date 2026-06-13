@@ -17,7 +17,10 @@ public class SimulationController {
     private final Map<Wall, List<Shelf>> shelvesByWall;
     private final EventManager eventManager;
     private int currentWeek;
+    private String displayName;
 
+    private static final double ROOM_EXTERNAL_SPORE_DEPOSITION = 0.00002;
+    private static final double ROOM_INTERNAL_SPORE_DEPOSITION = 0.004;
     private static final double BASE_SPORE_GERMINATION = 0.05; //probabilité qu’une spore déposée germe
     private static final double SPORULATION_THRESHOLD = 10.0; //niveau de moisissure à partir duquel une cellule devient sporulante
     private static final int MIN_ACTIVE_MOLD_AGE_BEFORE_DEATH = 104; // 104 semaines : seuil de mort naturelle liée à l'âge.
@@ -34,7 +37,8 @@ public class SimulationController {
         this.eventManager = new EventManager(environment);
         this.shelvesByWall = new HashMap<>(shelvesByWall);
         initSensors(shelvesByWall);
-        alertController.setRecommendationEngine(new RecommendationEngine(room));
+        this.displayName = "Unknown";
+        alertController.setRecommendationEngine(new RecommendationEngine(displayName));
     }
 
     public SimulationController(Wall wall, Environment environment) {
@@ -51,7 +55,8 @@ public class SimulationController {
         this.shelvesByWall.put(wall, new ArrayList<>());
 
         initSensors(this.shelvesByWall);
-        alertController.setRecommendationEngine(new RecommendationEngine(room));
+        this.displayName = "Unknown";
+        alertController.setRecommendationEngine(new RecommendationEngine(displayName));
     }
 
     private void initSensors(Map<Wall, List<Shelf>> shelvesByWall) {
@@ -168,12 +173,14 @@ public class SimulationController {
     }
 
     public void resetSensors() {
-        sensors.clear();
-        initSensors(shelvesByWall);
-    }
-
+        for (MoldSensor sensor : sensors) {
+            sensor.reset();
+        }
+}
     public void setDisplayName(String displayName) {
+        this.displayName = displayName;
         alertController.setContextName(displayName);
+        alertController.getRecommendationEngine().setWallName(displayName);
     }
 
     private boolean isActiveMold(Cell cell) {
@@ -281,6 +288,54 @@ public class SimulationController {
         }
     }
 
+    public void depositSporesAcrossRoom(List<WallContext> walls) {
+        MoldSpecies species = MoldSpecies.CLADOSPORIUM;
+        int totalCells = 0;
+        int sporulatingCount = 0;
+
+        for (WallContext wallContext : walls) {
+            Wall wall = wallContext.getWall();
+            totalCells += wall.getWidth() * wall.getHeight();
+            sporulatingCount += countCellsByState(wall, CellState.SPORULATING);
+        }
+        if (totalCells <= 0) return;
+        double sporulatingRatio = (double) sporulatingCount / totalCells;
+        double sporePressure = 1.0 - Math.exp(-8.0 * sporulatingRatio);
+        double environmentalSuitability = computeHumiditySuitability(species) * computeTemperatureSuitability(species) * computeVentilationBlockingFactor();
+        double probability = environmentalSuitability * (ROOM_EXTERNAL_SPORE_DEPOSITION + ROOM_INTERNAL_SPORE_DEPOSITION * sporePressure);
+
+        for (WallContext wallContext : walls) {
+            depositSporesOnWall(wallContext.getWall(), species, probability);
+        }
+    }
+
+    private void depositSporesOnWall(Wall wall, MoldSpecies species, double probability) {
+        for (Cell[] row : wall.getGrid()) {
+            for (Cell cell : row) {
+                if (cell.getState() == CellState.HEALTHY) {
+                    if (Math.random() < probability) {
+                        cell.setState(CellState.DEPOSITED_SPORE);
+                        cell.setSpecies(species);
+                        cell.setMoldLevel(0.0);
+                        cell.setAge(0);
+                    }
+                }
+            }
+        }
+    }
+
+    private int countCellsByState(Wall wall, CellState state) {
+        int count = 0;
+        for (Cell[] row : wall.getGrid()) {
+            for (Cell cell : row) {
+                if (cell.getState() == state) {
+                    count++;
+                }
+            }
+        }
+        return count;
+    }
+
     private void killOldMoldCells(Wall wall) {
         for (Cell[] row : wall.getGrid()) {
             for (Cell cell : row) {
@@ -327,4 +382,5 @@ public class SimulationController {
     public void setCurrentWeek(int week) {
         this.currentWeek = week;
     }
+
 }

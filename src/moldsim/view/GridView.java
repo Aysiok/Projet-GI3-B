@@ -4,7 +4,6 @@ import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.input.MouseButton;
 import javafx.scene.paint.Color;
-import moldsim.controller.SimulationController;
 import moldsim.model.*;
 /**
  * Graphical 2D grid drawn with JavaFX Canvas.
@@ -42,7 +41,6 @@ public class GridView extends Canvas {
     private ShelfValue[][] cellValue;
     
     // ── model references ──────────────────────────────────────────────────────
-    private SimulationController simulation;
     private Wall modelGrid;
 
     // ── listeners ─────────────────────────────────────────────────────────────
@@ -58,7 +56,6 @@ public class GridView extends Canvas {
 
     // ── misc ──────────────────────────────────────────────────────────────────
     private ShelfValue nextShelfValue = ShelfValue.MEDIUM;
-    public enum DrawMode { POINT, BRUSH, RECTANGLE }
     private DrawMode drawMode = DrawMode.POINT;
     private boolean justFinishedRectangle = false;
     private InteractionMode interactionMode = InteractionMode.NONE;
@@ -254,9 +251,8 @@ public class GridView extends Canvas {
         this.shelfPlacementListener = listener;
     }
 
-    public void setSimulation(SimulationController simulation, Wall modelGrid) {
-        this.simulation = simulation;
-        this.modelGrid  = modelGrid;
+    public void setModelGrid(Wall modelGrid) {
+        this.modelGrid = modelGrid;
     }
 
     // ═════════════════════════════════════════════════════════════════════════
@@ -274,20 +270,6 @@ public class GridView extends Canvas {
         }
         syncModelCellFromView(row, column);
         draw();
-    }
-
-    public void stepSimulation() {
-        for (int row = 0; row < rows; row++){
-            for (int col = 0; col < columns; col++){
-                if (cells[row][col] == TREATED){
-                    cells[row][col] = HEALTHY;
-                }
-            }
-        }
-        if (simulation != null) {
-            simulation.step();
-            updateViewFromModel();
-        }
     }
 
     public void reset() {
@@ -449,7 +431,6 @@ public class GridView extends Canvas {
     public void paintMold(int row, int col) {
         if (!isInside(row, col)) return;
         cells[row][col] = INFECTED;
-        syncModelCellFromView(row, col);
         draw();
     }
 
@@ -458,8 +439,6 @@ public class GridView extends Canvas {
         int state = cells[row][col];
         if (state == INFECTED || state == SPORULATING || state == DEPOSITED_SPORE) {
             cells[row][col] = TREATED;
-            Cell cell = modelGrid.getCell(col, row);
-            if (cell != null) cell.cure();
         }
         draw();
     }
@@ -468,8 +447,6 @@ public class GridView extends Canvas {
         if (!isInside(row, col)) return;
         if (cells[row][col] == INFECTED) {
             cells[row][col] = HEALTHY;
-            Cell cell = modelGrid.getCell(col, row);
-            if (cell != null) cell.cure();
         }
         draw();
     }
@@ -478,8 +455,6 @@ public class GridView extends Canvas {
         if (!isInside(row, col)) return;
         if (cells[row][col] == TREATED) {
             cells[row][col] = SPORULATING;
-            Cell cell = modelGrid.getCell(col, row);
-            if (cell != null) cell.infect(MoldSpecies.CLADOSPORIUM);
         }
         draw();
     }
@@ -649,10 +624,6 @@ public class GridView extends Canvas {
     public interface ShelfPlacementListener {
         boolean onShelfPlaced(int row, int col, int width, int height);
         void onShelfRemoved(int row, int col);
-    }
-
-    public enum InteractionMode {
-        NONE, ADD_MOLD, TREAT_WALL, TREAT_SHELF, PLACE_EVENT
     }
 
     public interface InteractionCompleteListener {

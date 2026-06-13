@@ -45,7 +45,7 @@ public class Cell implements Serializable {
     /** Infecte la cellule même si elle est morte */
     public void infect(MoldSpecies species) {
         if (species == null) {
-            species = MoldSpecies.ASPERGILLUS;
+            species = MoldSpecies.CLADOSPORIUM;
         }
         if (state == CellState.DEAD) return;
         this.state = CellState.INFECTED;

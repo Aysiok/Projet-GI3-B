@@ -3,6 +3,8 @@ package moldsim.model;
 import java.io.Serializable;
 import java.util.List;
 
+import moldsim.controller.WallContext;
+
 /**
  * Complete simulation state for binary save/load.
  * Contains everything needed to fully restore a simulation.
