@@ -6,7 +6,6 @@ import moldsim.view.InteractionMode;
 import moldsim.view.DrawMode;
 import moldsim.view.MainView;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -29,7 +28,6 @@ public class GridController {
     private ExternalEvent pendingEvent = null;
     private InteractionMode previousMode = InteractionMode.NONE;
     private WallManager wallManager;
-    private final PdfExportService pdfExportService = new PdfExportService();
     
     private boolean updatingTimeSlider;
     private boolean updatingControls;
