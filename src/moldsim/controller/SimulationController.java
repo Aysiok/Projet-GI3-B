@@ -21,7 +21,7 @@ public class SimulationController {
     private static final double BASE_INTERNAL_SPORE_DEPOSITION = 0.004; //dépôt de spores dû aux moisissures sporulantes déjà présentes
     private static final double BASE_SPORE_GERMINATION = 0.05; //probabilité qu’une spore déposée germe
     private static final double SPORULATION_THRESHOLD = 10.0; //niveau de moisissure à partir duquel une cellule devient sporulante
-    private static final int MIN_ACTIVE_MOLD_AGE_BEFORE_DEATH = 104; //104 semaines (2 ans) : avant ça, une cellule infectée ne meurt normalement pas.
+    private static final int MIN_ACTIVE_MOLD_AGE_BEFORE_DEATH = 104; // 104 semaines : seuil de mort naturelle liée à l'âge.
     private static final double BASE_MOLD_DEATH_PROBABILITY = 0.04; //4% : probabilité de mort par semaine après ce seuil.
     private static final double CRITICAL_MOLD_LEVEL = 90.0; //90.0 : si le niveau de moisissure est très haut, la mort devient plus probable.
 
@@ -344,16 +344,13 @@ public class SimulationController {
                     continue;
                 }
 
-                if (cell.getAge() < MIN_ACTIVE_MOLD_AGE_BEFORE_DEATH
-                        && cell.getMoldLevel() < CRITICAL_MOLD_LEVEL) {
+                // Strictement aucune mort avant 104 semaines
+                if (cell.getAge() < MIN_ACTIVE_MOLD_AGE_BEFORE_DEATH) {
                     continue;
                 }
 
-                double ageFactor = 0.0;
-
-                if (cell.getAge() >= MIN_ACTIVE_MOLD_AGE_BEFORE_DEATH) {
-                    ageFactor = (cell.getAge() - MIN_ACTIVE_MOLD_AGE_BEFORE_DEATH) / 20.0;
-                }
+                double ageFactor =
+                        (cell.getAge() - MIN_ACTIVE_MOLD_AGE_BEFORE_DEATH) / 20.0;
 
                 double moldLevelFactor = 0.0;
 
